@@ -1,0 +1,14 @@
+.godot/
+*.tmp
+*.log
+.import/
+export/
+build/
+
+# Builds exportados (nunca al repo): exe, apk/aab, idsig, pck y zips de distribución
+*.exe
+*.apk
+*.apk.idsig
+*.aab
+*.pck
+app.zip
