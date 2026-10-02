@@ -141,7 +141,7 @@ Click Geiger de una roca cercana. **Descubrimiento #2:** acercarse acelera el cl
 ### 6 · Espectrómetro
 RT/E cerca de la roca → chirrido → silencio → voz descripción → contenedor *kchk* → `✓ Muestra 1 de 2`. Las rocas recolectadas desaparecen, liberan su casilla y dejan de detectarse.
 
-5 rocas: 2 catalogables con tipos y voces distintas (basalto en el cuadrante norte · regolito con óxidos al sur) y 3 decorativas (obsidiana al este, ígnea-B, sedimentaria al norte). La brecha de impacto ya no forma parte de la demo.
+4 rocas: 2 catalogables con tipos y voces distintas (basalto en el cuadrante norte · regolito al oeste) y 2 decorativas (obsidiana, sedimentaria al sur). La brecha de impacto ya no forma parte de la demo.
 
 ### 7 · Cápsula y puerta
 La base-cápsula es el **punto de inicio de la misión** y la meta: al llegar con todas las muestras se declara la misión cumplida. La puerta sigue figurada (transición interior/exterior, Fase 3).
@@ -185,7 +185,7 @@ Al pisar la base con todo a bordo → **MISIÓN CUMPLIDA** (voz "misión cumplid
 ## 8. Alcance v1 y criterio de "listo"
 
 **Alcance:**
-- 1 nivel: campo abierto con 5 rocas (2 a recolectar: basalto + regolito) + 3 decorativas + 1 base-cápsula (inicio y meta).
+- 1 nivel: campo abierto con 4 rocas (2 a recolectar: basalto + regolito) + 2 decorativas + 1 base-cápsula (inicio y meta).
 - 2 tipos catalogables con descripción por voz (WAV Piper); decorativas identificables pero no recolectables.
 - Alrededores (LT) · espectrómetro (RT) · misión "recolectá todo y volvé a la base" · menús scrolleables (Fase 4). (Sonar de geometría y vara: fuera de la demo, se re-evalúan.)
 - Audio procedural + voces por palabra pre-generadas con Piper (WAV en `assets/voice/`).

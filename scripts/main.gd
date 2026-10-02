@@ -502,11 +502,10 @@ func _add_wall(center: Vector2, size: Vector2) -> void:
 	add_child(body)
 
 func _build_objects() -> void:
-	# 5 rocas: 2 catalogables (basalto, regolito) + 3 decorativas.
+	# 4 rocas: 2 catalogables (basalto, regolito) + 2 decorativas.
 	var rock_cells := [
 		["BASALTO", Vector2i(10, 1), true],
 		["OBSIDIANA", Vector2i(10, 5), false],
-		["IGNEA-B", Vector2i(4, 6), false],
 		["SEDIMENTARIA", Vector2i(6, 7), false],
 		["REGOLITO", Vector2i(2, 4), true],
 	]
@@ -534,7 +533,6 @@ func _voice_word(type_name: String) -> String:
 	var dict := {
 		"BASALTO": "basalto",
 		"REGOLITO": "regolito",
-		"IGNEA-B": "ignea",
 		"SEDIMENTARIA": "sedimentaria",
 		"OBSIDIANA": "obsidiana",
 	}
