@@ -49,7 +49,7 @@ func _run() -> void:
 	var around: String = main._debug_label.text.to_lower()
 	_check("nada" in around, "roca recolectada ya no se detecta (nada delante)")
 
-	# Con todas las muestras, LB describe la BASE (guía de regreso), no las rocas.
+	# Con todas las muestras, LT describe la BASE (guía de regreso), no las rocas.
 	main._collected = main._catalog_count
 	for b in main._rock_data:
 		b.collected = b.catalogable
@@ -59,7 +59,7 @@ func _run() -> void:
 	await physics_frame
 	main._describe_surroundings()
 	var base_around: String = main._debug_label.text.to_lower()
-	_check("base" in base_around and "delante" in base_around, "todas recolectadas → LB guía hacia la base")
+	_check("base" in base_around and "delante" in base_around, "todas recolectadas → LT guía hacia la base")
 
 	# Aviso "todas recolectadas / volver base".
 	main._announce_all_collected()

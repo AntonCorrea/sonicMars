@@ -1,6 +1,6 @@
 extends SceneTree
 
-## Smoke test de distancias del detector (LB / R): la cantidad dicha debe ser
+## Smoke test de distancias del detector (LT / Q): la cantidad dicha debe ser
 ## PASOS sobre el eje de la dirección nombrada, no distancia diagonal.
 ## Caso reportado por el usuario: roca a 2 adelante + 1-2 al costado
 ## → "a 2 casillas delante" (antes: dist. euclidiana → "3").

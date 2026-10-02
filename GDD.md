@@ -31,7 +31,7 @@ Misión de recolección de muestras en la superficie de Marte, guiada por descri
 
 | Gamepad | Teclado | Acción |
 |---|---|---|
-| LB | R | Describir alrededores — roca más cercana con tipo, distancia y dirección relativa |
+| LT | Q | Describir alrededores — roca más cercana con tipo, distancia y dirección relativa |
 | LS (eje Y) · RS (eje X) | W/S · A/D | Conducir: **LS = avance/retroceso · RS = giro 90°** (funciones únicas) |
 | RT | E | Interactuar / recoger muestra |
 | Start | ESC | Menú / pausa |
@@ -60,8 +60,8 @@ El mundo se divide en **casillas de 80 px** (grilla 16×9 = 1280×720, encasilla
 **Por qué grilla:** posiciones deterministas, narración audible exacta ("a X casillas"), colisión trivial, y aditividad para futuras mecánicas (geiger por distancia de casilla).
 
 ### Accesibilidad de input
-- Cada botón = **una sola función** (sin tap/hold): LB = alrededores · RT = espectrómetro. Un solo gesto mental por acción.
-- La misión se completa solo con **LB + RT** (y los pasos): garantía de accesibilidad (ojos cerrados).
+- Cada botón = **una sola función** (sin tap/hold): LT = alrededores · RT = espectrómetro. Un solo gesto mental por acción.
+- La misión se completa solo con **LT + RT** (y los pasos): garantía de accesibilidad (ojos cerrados).
 
 ---
 
@@ -69,15 +69,15 @@ El mundo se divide en **casillas de 80 px** (grilla 16×9 = 1280×720, encasilla
 
 | Herramienta | Gesto | Devuelve |
 |---|---|---|
-| **Alrededores** | LB / R | Roca más cercana dentro de un cono frontal de ~90° (crece hasta 5 casillas de ancho): tipo + distancia + dirección relativa |
+| **Alrededores** | LT / Q | Roca más cercana dentro de un cono frontal de ~90° (crece hasta 5 casillas de ancho): tipo + distancia + dirección relativa |
 | **Espectrómetro** | RT / E | Recoge y cataloga la muestra de la roca adyacente |
 
-> **Estado demo:** el sonar de geometría (pulso, LT tap) y la vara (LT hold / Q) fueron **removidos por ahora** para reducir a un gesto mental por botón. Si la navegación a oscuras lo exige, son los primeros candidatos a reintroducir. La voz de identificación vive en los alrededores; el apoyo de navegación es el **conteo de pasos** (crunch) y el **golpe seco** al bloquearse.
+> **Estado demo:** el sonar de geometría (pulso) y la vara (hold) fueron **removidos por ahora** para reducir a un gesto mental por botón; **LT se reasignó a alrededores** (Q en teclado). Si la navegación a oscuras lo exige, son los primeros candidatos a reintroducir. La voz de identificación vive en los alrededores; el apoyo de navegación es el **conteo de pasos** (crunch) y el **golpe seco** al bloquearse.
 
 **Alrededores** — lectura de conciencia situacional cuando el jugador está perdido. Barre un **cono de ~90° hacia adelante** centrado en el jugador (mínimo 3 casillas de ancho en la fila del cuerpo) que se **ensancha al avanzar hasta 5 casillas de ancho máximo** — así cubre también los costados. Toma la **roca más cercana dentro de ese cono** y la nombra con su distancia y dirección **relativa al cuerpo**:
 > "Roca de basalto a 2 casillas delante."
 
-Direcciones **relativas al cuerpo** en v1 (sin brújula; con todas las muestras a bordo, LB orienta hacia la base).
+Direcciones **relativas al cuerpo** en v1 (sin brújula; con todas las muestras a bordo, LT orienta hacia la base).
 
 ---
 
@@ -94,8 +94,8 @@ Reglas: **un sonido = una cosa** · nada musical durante la misión · **toda** 
 | 5 | **Ta-da de confirmación** | 2 tonos iguales rápidos | "Seleccionaste, seguimos" |
 | 8 | **Eco de base** | retorno grave, retardado, casi inaudible | "El objetivo a la distancia" (reservado, Fase 3) |
 | 9 | ~~Beacon de roca~~ | ~~click tipo Geiger~~ | **Removido por ahora** (se reevalúa en fase posterior) |
-| 12 | **LB — roca más cercana** | voz relativa al cuerpo + cierre con fin de diálogo | "Dónde está la piedra más próxima" |
-| 12b | **LB — guía de base** | voz base + dirección + distancia (activa con todas las muestras) | "El objetivo cambió: volvé al hogar" |
+| 12 | **LT — roca más cercana** | voz relativa al cuerpo + cierre con fin de diálogo | "Dónde está la piedra más próxima" |
+| 12b | **LT — guía de base** | voz base + dirección + distancia (activa con todas las muestras) | "El objetivo cambió: volvé al hogar" |
 | 13 | **Espectrómetro activo** | chirrido de audio + silencio de suspenso | "Analizando…" |
 | 14 | **Contenedor** | *kchk* — escala musical por muestra (1ª media, 2ª grave, 3ª aguda) | "Muestra guardada + progreso" |
 | 15 | **Tono de base** | bajo grave constante, más grave = más cerca | "El hogar te llama" |
@@ -127,16 +127,16 @@ Motor se apaga. Voz de Control Central con fondo de sala de control:
 > "Base Harmony, aquí Control Central." [fin de diálogo]
 > "Recolectá las dos muestras y volvé a la base." [fin de diálogo]
 > "Localizá las rocas con los alrededores y recogelas con el espectrómetro. Cuando tengas todo, volvé." [fin de diálogo]
-Compuerta *chsss* → reloj corre. Si no hace nada 10 s → subtítulo `[LB] alrededores · [RT] espectrómetro`.
+Compuerta *chsss* → reloj corre. Si no hace nada 10 s → subtítulo `[LT] alrededores · [RT] espectrómetro`.
 
 ### 3 · Salida a superficie
 Pasos sobre regolito, viento. **Descubrimiento #1:** cada paso de regolito mide una casilla.
 
 ### 4 · Exploración
-LB → voz: la roca más cercana dentro de la banda, con **dirección relativa** y **distancia en casillas** ("roca de basalto a 3 casillas izquierda"). Los pasos (crunch) permiten contar la distancia; el bloqueo (golpe seco) avisa del borde.
+LT → voz: la roca más cercana dentro de la banda, con **dirección relativa** y **distancia en casillas** ("roca de basalto a 3 casillas izquierda"). Los pasos (crunch) permiten contar la distancia; el bloqueo (golpe seco) avisa del borde.
 
 ### 5 · El primer beacon
-Click Geiger de una roca cercana. **Descubrimiento #2:** acercarse acelera el click → una aguja sonora. Precio: confirmar con **LB** al llegar.
+Click Geiger de una roca cercana. **Descubrimiento #2:** acercarse acelera el click → una aguja sonora. Precio: confirmar con **LT** al llegar.
 
 ### 6 · Espectrómetro
 RT/E cerca de la roca → chirrido → silencio → voz descripción → contenedor *kchk* → `✓ Muestra 1 de 2`. Las rocas recolectadas desaparecen, liberan su casilla y dejan de detectarse.
@@ -147,7 +147,7 @@ RT/E cerca de la roca → chirrido → silencio → voz descripción → contene
 La base-cápsula es el **punto de inicio de la misión** y la meta: al llegar con todas las muestras se declara la misión cumplida. La puerta sigue figurada (transición interior/exterior, Fase 3).
 
 ### 8 · Tornada
-Con todas las muestras a bordo, **LB deja de buscar rocas y guía hacia la base** ("base a 3 casillas delante") y se anuncia "todas las muestras recolectadas · volver base". El jugador combina: pasos para medir la distancia y LB para reorientarse.
+Con todas las muestras a bordo, **LT deja de buscar rocas y guía hacia la base** ("base a 3 casillas delante") y se anuncia "todas las muestras recolectadas · volver base". El jugador combina: pasos para medir la distancia y LT para reorientarse.
 
 ### 9 · Base
 Al pisar la base con todo a bordo → **MISIÓN CUMPLIDA** (voz "misión cumplida" + HUD). El menú scrolleable de resumen y la entrega formal de muestras son Fase 4.
@@ -165,7 +165,7 @@ Al pisar la base con todo a bordo → **MISIÓN CUMPLIDA** (voz "misión cumplid
 ## 6. Los 3 descubrimientos (sin tutorial)
 
 1. **El regolito mide el paso** → cada crunch es una casilla; los pasos son la regla de distancia.
-2. **LB es la brújula** → la roca más cercana siempre se orienta respecto al cuerpo.
+2. **LT es la brújula** → la roca más cercana siempre se orienta respecto al cuerpo.
 3. **El tono grave es el hogar** → la base es un faro (Fase 3).
 (El espectrómetro cataloga; el sonar de geometría/vara se re-evalúan fuera de la demo.)
 
@@ -174,9 +174,9 @@ Al pisar la base con todo a bordo → **MISIÓN CUMPLIDA** (voz "misión cumplid
 ## 7. Accesibilidad (garantías)
 
 - **Audio-first:** toda información por sonido y voz; subtítulos siempre visibles.
-- **Modo sin vista:** pantalla apagada; la misión se completa con LB (alrededores + guía de base) + RT (espectrómetro) + pasos.
+- **Modo sin vista:** pantalla apagada; la misión se completa con LT (alrededores + guía de base) + RT (espectrómetro) + pasos.
 - **Contraste alto:** modo gráfico de formas grandes de color para baja visión (polish).
-- **Input simple:** cada botón = una sola acción (LB alrededores · RT espectrómetro).
+- **Input simple:** cada botón = una sola acción (LT alrededores · RT espectrómetro).
 - **HUD:** subtítulos visibles + botón **REINICIAR EXPERIENCIA** (esquina inf. derecha) que vuelve misión, rocas y rover al arranque e invalida análisis/anuncios en vuelo.
 - **Sin presión:** 4 minutos configirables; modo "sin estrés" opcional (sin reloj).
 
@@ -187,7 +187,7 @@ Al pisar la base con todo a bordo → **MISIÓN CUMPLIDA** (voz "misión cumplid
 **Alcance:**
 - 1 nivel: campo abierto con 5 rocas (2 a recolectar: basalto + regolito) + 3 decorativas + 1 base-cápsula (inicio y meta).
 - 2 tipos catalogables con descripción por voz (WAV Piper); decorativas identificables pero no recolectables.
-- Alrededores (LB) · espectrómetro (RT) · misión "recolectá todo y volvé a la base" · menús scrolleables (Fase 4). (Sonar de geometría y vara: fuera de la demo, se re-evalúan.)
+- Alrededores (LT) · espectrómetro (RT) · misión "recolectá todo y volvé a la base" · menús scrolleables (Fase 4). (Sonar de geometría y vara: fuera de la demo, se re-evalúan.)
 - Audio procedural + voces por palabra pre-generadas con Piper (WAV en `assets/voice/`).
 - Gamepad + teclado · export Windows.
 
@@ -204,7 +204,7 @@ Al pisar la base con todo a bordo → **MISIÓN CUMPLIDA** (voz "misión cumplid
 | 0 | Scaffold Godot: project.godot, input maps, buses de audio (Ambiente/SFX/Voz), export Windows | ✅ |
 | 1 | Movimiento diferencial + viento ambiente + picho/eco (audio espacial) | ✅ |
 | 2 | Rocas + beacon Geiger + spectrómetro (descripción voz + contenedor) | ✅ |
-| 3 | Misión completa: win al volver con todas las muestras a la base + guía por LB · falta reloj/compuerta | 🟡 parcial |
+| 3 | Misión completa: win al volver con todas las muestras a la base + guía por LT · falta reloj/compuerta | 🟡 parcial |
 | 4 | Menús scrolleables + narración + gramática de selección + accesibilidad | 🔲 |
 | 5 | Pulido, build .exe, playtest externo (ojos cerrados), unidad con museo/Expo | 🔲 |
 

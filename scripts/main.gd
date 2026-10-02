@@ -4,7 +4,7 @@ extends Node2D
 ## - Buses de audio (Ambiente / SFX / Voz) + layout desde default_bus_layout.tres
 ## - Viento de superficie (loop procedural)
 ## - Movimiento en grilla (MapGrid 16×9 = ventana completa) + sonidos de paso y bloqueo
-## - ALREDEDORES (LB / R): voz que nombra la roca más cercana y su dirección relativa
+## - ALREDEDORES (LT / R): voz que nombra la roca más cercana y su dirección relativa
 ## - ESPECTRÓMETRO (RT / E): chirrido → voz → contenedor (muestra guardada)
 ## - Base-cápsula: inicio de la misión y punto de entrega (victoria al volver con todas las muestras)
 ## - Sonar de geometría (pulso) y vara: removidos por ahora (se re-evalúan)
@@ -30,6 +30,7 @@ var _container_player: AudioStreamPlayer
 var _turn_player: AudioStreamPlayer
 
 var _rt_down := false
+var _lt_down := false
 
 ## Diagnóstico de gamepad (Android): primer pad conectado + readout temporal.
 var _debug_pad := -1
@@ -39,6 +40,7 @@ var _base_label_text := ""
 var _peak_ly := 0.0
 var _peak_rx := 0.0
 var _peak_rt := 0.0
+var _peak_lt := 0.0
 var _peak_dirty := false
 var _last_peak_log := 0
 
@@ -91,7 +93,7 @@ func _ready() -> void:
 	add_child(_wind_player)
 	_wind_player.play()
 
-	_debug_label.text = "MARTE SÓNICO — recolectá todas las muestras y volvé a la base · LB/R = alrededores · RT/E = espectrómetro · LS/RS = conducir"
+	_debug_label.text = "MARTE SÓNICO — recolectá todas las muestras y volvé a la base · LT/Q = alrededores · RT/E = espectrómetro · LS/RS = conducir"
 	_base_label_text = _debug_label.text
 	_setup_hud_button()
 
@@ -145,6 +147,7 @@ func _restart_experience() -> void:
 
 func _process(delta: float) -> void:
 	_poll_right_trigger()
+	_poll_left_trigger()
 
 	if Input.is_action_just_pressed(&"interact"):
 		_try_interact()
@@ -165,7 +168,8 @@ func _pad_id() -> int:
 		var ly := Input.get_joy_axis(id, JOY_AXIS_LEFT_Y)
 		var rx := Input.get_joy_axis(id, JOY_AXIS_RIGHT_X)
 		var rt := Input.get_joy_axis(id, JOY_AXIS_TRIGGER_RIGHT)
-		if absf(ly) > Player.AXIS_DEADZONE or absf(rx) > Player.AXIS_DEADZONE or rt > 0.4:
+		var lt := Input.get_joy_axis(id, JOY_AXIS_TRIGGER_LEFT)
+		if absf(ly) > Player.AXIS_DEADZONE or absf(rx) > Player.AXIS_DEADZONE or rt > 0.4 or lt > 0.4:
 			return id
 	return -1
 
@@ -190,6 +194,7 @@ func _on_joy_connection_changed(device: int, connected: bool) -> void:
 		_peak_ly = 0.0
 		_peak_rx = 0.0
 		_peak_rt = 0.0
+		_peak_lt = 0.0
 		_peak_dirty = false
 		_last_peak_log = Time.get_ticks_msec()
 		_log_pad("CONNECTED PADS=%s" % [Input.get_connected_joypads()])
@@ -208,9 +213,11 @@ func _update_pad_readout() -> void:
 	var ly := Input.get_joy_axis(id, JOY_AXIS_LEFT_Y)
 	var rx := Input.get_joy_axis(id, JOY_AXIS_RIGHT_X)
 	var rt := Input.get_joy_axis(id, JOY_AXIS_TRIGGER_RIGHT)
+	var lt := Input.get_joy_axis(id, JOY_AXIS_TRIGGER_LEFT)
 	var la := absf(ly)
 	var ra := absf(rx)
 	var ta := absf(rt)
+	var lat := absf(lt)
 	if la > _peak_ly:
 		_peak_ly = la
 		_peak_dirty = true
@@ -220,13 +227,16 @@ func _update_pad_readout() -> void:
 	if ta > _peak_rt:
 		_peak_rt = ta
 		_peak_dirty = true
+	if lat > _peak_lt:
+		_peak_lt = lat
+		_peak_dirty = true
 	var now := Time.get_ticks_msec()
 	if _peak_dirty and now - _last_peak_log >= 1000:
-		_log_pad("AXIS PEAKS LY=%.3f RX=%.3f RT=%.3f" % [_peak_ly, _peak_rx, _peak_rt])
+		_log_pad("AXIS PEAKS LY=%.3f RX=%.3f RT=%.3f LT=%.3f" % [_peak_ly, _peak_rx, _peak_rt, _peak_lt])
 		_peak_dirty = false
 		_last_peak_log = now
 	var cmd := Player.axes_to_command(ly, rx)
-	var stick_live := la > 0.1 or ra > 0.1 or rt > 0.1
+	var stick_live := la > 0.1 or ra > 0.1 or ta > 0.1 or lat > 0.1
 	if now < _pad_readout_until or stick_live:
 		var dev0 := ""
 		var pads := Input.get_connected_joypads()
@@ -237,25 +247,42 @@ func _update_pad_readout() -> void:
 					Input.get_joy_axis(pads[0], JOY_AXIS_RIGHT_X)),
 				Input.get_joy_axis(pads[0], JOY_AXIS_LEFT_Y),
 				Input.get_joy_axis(pads[0], JOY_AXIS_RIGHT_X)]
-		_debug_label.text = "JOYPAD %d · %s (known=%s)\nLY=%.2f RX=%.2f RT=%.2f · LB=%s · CMD=%s%s\n%s" % [
+		_debug_label.text = "JOYPAD %d · %s (known=%s)\nLY=%.2f RX=%.2f RT=%.2f LT=%.2f · CMD=%s%s\n%s" % [
 			id, Input.get_joy_name(id), Input.is_joy_known(id),
-			ly, rx, rt,
-			"pressed" if Input.is_joy_button_pressed(id, JOY_BUTTON_LEFT_SHOULDER) else "up",
+			ly, rx, rt, lt,
 			cmd, dev0,
 			"guid=" + Input.get_joy_guid(id)]
 	elif _debug_label.text.begins_with("JOYPAD"):
 		_debug_label.text = _base_label_text
 
-## Gatillo derecho: los pads reportan RT como eje (no como botón) → se sondea por eje.
+## Gatillos: los pads reportan LT/RT como eje (no como botón) → se sondean por
+## eje. El flanco ascendente se procesa en _consume_*_trigger (testeable sin pad).
+## LT → alrededores (igual que la tecla Q) · RT → recoger (igual que la tecla E).
 func _poll_right_trigger() -> void:
 	var pad := _pad_id()
 	var rt := 0.0 if pad < 0 else Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_RIGHT)
+	_consume_right_trigger(rt)
+
+func _poll_left_trigger() -> void:
+	var pad := _pad_id()
+	var lt := 0.0 if pad < 0 else Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_LEFT)
+	_consume_left_trigger(lt)
+
+func _consume_right_trigger(rt: float) -> void:
 	if rt > 0.4:
 		if not _rt_down:
 			_rt_down = true
 			_try_interact()
 	else:
 		_rt_down = false
+
+func _consume_left_trigger(lt: float) -> void:
+	if lt > 0.4:
+		if not _lt_down:
+			_lt_down = true
+			_describe_surroundings()
+	else:
+		_lt_down = false
 
 ## ---- Paso y bloqueo ----
 
@@ -287,7 +314,7 @@ func _say(words: Array) -> void:
 	_voice_player.stream = AudioLib.speak_words(words)
 	_voice_player.play()
 
-## ---- ALREDEDORES (LB / R) ----
+## ---- ALREDEDORES (LT / R) ----
 
 ## Dirección relativa al cuerpo (facing): delante/detras/izquierda/derecha.
 func _relative_dir(to_cell: Vector2i) -> String:
@@ -328,7 +355,7 @@ func _steps_to(to_cell: Vector2i, dir: String) -> int:
 ## cono hacia adelante de ~90° (mínimo 3 de ancho) que se ensancha al
 ## avanzar y crece hasta 5 casillas de ancho máximo.
 func _describe_surroundings() -> void:
-	# Con todas las muestras a bordo, el foco pasa a la base: LB guía el regreso.
+	# Con todas las muestras a bordo, el foco pasa a la base: LT guía el regreso.
 	if _catalog_count > 0 and _collected >= _catalog_count and not _mission_done:
 		_describe_base()
 		return
@@ -359,7 +386,7 @@ func _describe_surroundings() -> void:
 	_debug_label.text = "ALREDEDOR: %s %s %d" % [nearest.type, dir, cells]
 	_say(["roca", "de", nearest.voice, "a", _cells_word(cells), "casillas", dir])
 
-## Modo guía: con todas las muestras, LB orienta hacia la base.
+## Modo guía: con todas las muestras, LT orienta hacia la base.
 func _describe_base() -> void:
 	if _player.cell == BASE_CELL:
 		_debug_label.text = "BASE: estás en la base"
