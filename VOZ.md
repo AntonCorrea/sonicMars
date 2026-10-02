@@ -102,3 +102,17 @@ y vara). Se conservan como asset para futuras frases.
 
 Pasos (crunch) · bloqueo (thud) · giro (paneado 80/20 al oído del lado del
 giro) · chirrido del espectrómetro · *kchk* del contenedor · viento ambiente.
+
+## Regenerar la voz con otro TTS (ElevenLabs)
+
+El pipeline de voz es agnóstico al generador: un WAV por palabra, PCM 16-bit
+**mono 22050 Hz** (`AudioLib._word_audio` rechaza cualquier otro formato y cae
+al formant). Para re-baker con ElevenLabs:
+
+1. `python tools/elevenlabs_bake.py --voice-id <id> --out tmp` (key en
+   `ELEVENLABS_API_KEY`). Usa `output_format=wav_22050` → WAV PCM directo.
+2. Escuchá una frase y si va, volcá sobre `assets/voice/` (guardá los WAV de
+   piper por si querés volver).
+3. Forzá `compress/mode=0` en los `.import` (QOA → estática) y re-importá.
+
+Más detalles en la cabecera del script.
