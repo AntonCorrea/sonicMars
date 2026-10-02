@@ -55,6 +55,10 @@ var _collected := 0
 var _catalog_count := 0
 var _mission_done := false
 var _spectro_busy := false
+## Generación de la sesión: se incrementa al reiniciar para invalidar anuncios y
+## análisis en vuelo (coroutines que quedaron en espera).
+var _session := 0
+var _hud_button: Button
 
 func _ready() -> void:
 	_setup_audio_buses()
@@ -89,6 +93,7 @@ func _ready() -> void:
 
 	_debug_label.text = "MARTE SÓNICO — recolectá todas las muestras y volvé a la base · LB/R = alrededores · RT/E = espectrómetro · LS/RS = conducir"
 	_base_label_text = _debug_label.text
+	_setup_hud_button()
 
 	# Mappings custom (pads no reconocidos) + diagnóstico de gamepads.
 	for m in CUSTOM_JOY_MAPPINGS:
@@ -103,6 +108,40 @@ func _make_sfx_player(stream: AudioStream) -> AudioStreamPlayer:
 	p.stream = stream
 	add_child(p)
 	return p
+
+## Botón del HUD para reiniciar toda la experiencia (esquina inferior derecha).
+func _setup_hud_button() -> void:
+	var btn := Button.new()
+	btn.text = "REINICIAR EXPERIENCIA"
+	btn.add_theme_font_size_override("font_size", 16)
+	btn.custom_minimum_size = Vector2(270, 46)
+	btn.size = Vector2(270, 46)
+	btn.position = Vector2(MapGrid.COLS * MapGrid.CELL - 270.0 - 12.0, MapGrid.ROWS * MapGrid.CELL - 46.0 - 12.0)
+	btn.pressed.connect(_restart_experience)
+	add_child(btn)
+	_hud_button = btn
+
+## Reinicio completo: la misión, las rocas, el rover y el HUD vuelven al estado
+## inicial (spawn en la base, catálogo completo por recolectar). Los anuncios y
+## análisis en vuelo quedan invalidados con _session.
+func _restart_experience() -> void:
+	_log_pad("RESTART experiencia")
+	_session += 1
+	_voice_player.stop()
+	_spectro_player.stop()
+	_collected = 0
+	_catalog_count = 0
+	_mission_done = false
+	_spectro_busy = false
+	for rock in _rock_data:
+		rock.collected = false
+		rock.node.visible = true
+		grid.set_blocked(rock.cell, true)
+		if rock.catalogable:
+			_catalog_count += 1
+	_player.reset_to(SPAWN_CELL, MapGrid.W)
+	_debug_label.text = _base_label_text
+	queue_redraw()
 
 func _process(delta: float) -> void:
 	_poll_right_trigger()
@@ -348,6 +387,7 @@ func _nearest_rock_nearby() -> Dictionary:
 func _try_interact() -> void:
 	if _spectro_busy:
 		return
+	var sess := _session
 	var block := _nearest_rock_nearby()
 	if block.is_empty():
 		_debug_label.text = "NADA CERCA"
@@ -360,8 +400,14 @@ func _try_interact() -> void:
 	_spectro_player.pitch_scale = randf_range(0.95, 1.05)
 	_spectro_player.play()
 	await get_tree().create_timer(0.4).timeout
+	if sess != _session:
+		_spectro_busy = false
+		return
 	_say(["roca", "de", block.voice, "muestra", "analizada"])
 	await get_tree().create_timer(1.5).timeout
+	if sess != _session:
+		_spectro_busy = false
+		return
 	block.collected = true
 	_collected += 1
 	# La roca recolectada deja de existir para la detección: desaparece y
@@ -383,12 +429,18 @@ func _wait_voice_idle() -> void:
 ## Anuncio: todas las muestras recolectadas → volver a la base.
 func _announce_all_collected() -> void:
 	_debug_label.text = "MUESTRAS COMPLETAS — volver a la base"
+	var sess := _session
 	await _wait_voice_idle()
+	if sess != _session:
+		return
 	_say(["todas", "las", "muestras", "recolectadas", "volver", "base"])
 
 ## Anuncio: misión cumplida al pisar la base con todas las muestras.
 func _announce_mission_done() -> void:
+	var sess := _session
 	await _wait_voice_idle()
+	if sess != _session:
+		return
 	_say(["mision", "cumplida"])
 
 ## ---- Mundo ----

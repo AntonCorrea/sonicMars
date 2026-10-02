@@ -130,6 +130,23 @@ func _advance_rotation(delta: float) -> void:
 		state = State.IDLE
 		_hold = 0.0
 
+## Rejilla de juego cartesiana — reinicio: vuelve al estado inicial de arranque
+## (celda y orientación de la base, buffers de entrada limpios).
+func reset_to(start_cell: Vector2i, start_facing: Vector2i) -> void:
+	cell = start_cell
+	position = MapGrid.center(start_cell)
+	facing = start_facing
+	rotation = MapGrid.forward_angle(start_facing)
+	state = State.IDLE
+	_held = ""
+	_queued_cmd = ""
+	_hold = 0.0
+	_from = position
+	_to = position
+	_from_angle = rotation
+	_to_angle = rotation
+	_t = 0.0
+
 ## Dirección de avance (mundo) = hacia donde mira el jugador.
 func forward_dir() -> Vector2:
 	return Vector2(facing)

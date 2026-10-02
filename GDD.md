@@ -177,6 +177,7 @@ Al pisar la base con todo a bordo → **MISIÓN CUMPLIDA** (voz "misión cumplid
 - **Modo sin vista:** pantalla apagada; la misión se completa con LB (alrededores + guía de base) + RT (espectrómetro) + pasos.
 - **Contraste alto:** modo gráfico de formas grandes de color para baja visión (polish).
 - **Input simple:** cada botón = una sola acción (LB alrededores · RT espectrómetro).
+- **HUD:** subtítulos visibles + botón **REINICIAR EXPERIENCIA** (esquina inf. derecha) que vuelve misión, rocas y rover al arranque e invalida análisis/anuncios en vuelo.
 - **Sin presión:** 4 minutos configirables; modo "sin estrés" opcional (sin reloj).
 
 ---
