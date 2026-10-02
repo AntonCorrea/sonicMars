@@ -25,14 +25,14 @@ Misión de recolección de muestras en la superficie de Marte, guiada por descri
 | Input primario | **Gamepad** (museo/feria, sin teclado visible) |
 | Input respaldo | Teclado (desarrollo y PC) |
 | Vista | Primera persona **egocéntrica** · **posición = vista** (sin eje de cámara extra) |
-| Movimiento | **Grilla cartesiana** (celda 80 px · 16×9 = ventana completa 1280×720) · cada palanca replica el WASD: arriba=avanzar 1, abajo=retroceder, izq/der=girar 90° en eje · hold = repetición con cadencia |
+| Movimiento | **Grilla cartesiana** (celda 80 px · 16×9 = ventana completa 1280×720) · cada palanca replica el WASD: arriba=avanzar 1, abajo=retroceder, izq/der=girar 90° en eje · **cruzeta del pad = flechas digitales de lo mismo** · hold = repetición con cadencia |
 
 ### Mapa de input
 
 | Gamepad | Teclado | Acción |
 |---|---|---|
 | LT | Q | Describir alrededores — roca más cercana con tipo, distancia y dirección relativa |
-| LS (eje Y) · RS (eje X) | W/S · A/D | Conducir: **LS = avance/retroceso · RS = giro 90°** (funciones únicas) |
+| LS (eje Y) · RS (eje X) · **Cruzeta** | W/S · A/D | Conducir: **LS = avance/retroceso · RS = giro 90°** · **cruzeta = flechas digitales** (funciones únicas) |
 | RT | E | Interactuar / recoger muestra |
 | Start | ESC | Menú / pausa |
 
@@ -40,7 +40,7 @@ Misión de recolección de muestras en la superficie de Marte, guiada por descri
 
 ### Vehículo "tanque" en grilla (una sola referencia de mando)
 
-El mundo se divide en **casillas de 80 px** (grilla 16×9 = 1280×720, encasillada en la ventana, paredes en el borde). El jugador vive en una casilla (`Vector2i`) y mira hacia un cardinal (N/S/E/O). Las palancas tienen **función única**: la izquierda conduce (avance/retroceso) y la derecha dirige (giro) — un esquema discreto de paso a paso:
+El mundo se divide en **casillas de 80 px** (grilla 16×9 = 1280×720, encasillada en la ventana, paredes en el borde). El jugador vive en una casilla (`Vector2i`) y mira hacia un cardinal (N/S/E/O). Las palancas tienen **función única**: la izquierda conduce (avance/retroceso) y la derecha dirige (giro) — un esquema discreto de paso a paso. La **cruzeta** es el equivalente digital de las palancas (↑↓ conducen · ←→ giran).
 
 | Gesto | Resultado |
 |---|---|
@@ -48,6 +48,7 @@ El mundo se divide en **casillas de 80 px** (grilla 16×9 = 1280×720, encasilla
 | LS abajo | Retrocede 1 casilla (mismo eje) |
 | RS izquierda | Gira 90° a la izquierda (en el eje) |
 | RS derecha | Gira 90° a la derecha |
+| Cruzeta ↑↓ · ←→ | Conduce/gira como las palancas (flechas digitales, mismas cadencias) |
 | Mantener (hold) | Repite el paso/giro con cadencia fija (paso ~0.5 s, giro ~0.7 s) |
 
 **Detalles:**
@@ -106,7 +107,7 @@ Reglas: **un sonido = una cosa** · nada musical durante la misión · **toda** 
 | 19 | **Aviso de muestras completas** | voz "todas las muestras recolectadas · volver base" | "Misión lograda; regresá" |
 | 20 | **Misión cumplida** | voz "misión cumplida" | "Llegaste a la base con todo" |
 
-> **Voz en runtime:** WAV pre-generados con **Piper** (español — `es_ES-davefx-medium`, 22050 Hz, vocabulario + números) concatenados por palabra con pausa de 0.09 s y normalización RMS. Si falta el audio de una palabra, cae a síntesis *formant* en tiempo real. Regenerar voces: `python tools/piper_bake.py --model <modelo.onnx> --out assets/voice` (escribe en `assets/voice/`).
+> **Voz en runtime:** WAV pre-generados con **ElevenLabs** (voz **Bella**, 22050 Hz PCM mono 16-bit), concatenados por palabra con pausa corta y acelerados al 1.15 (`AudioLib.speak_words`). Si falta el audio de una palabra, cae a síntesis *formant* en tiempo real. Regenerar voces: `python tools/elevenlabs_bake.py --voice-id <id> --out assets/voice`; tras hornear, forzar `compress/mode=0` en los `.import` (QOA → estática) y re-importar. La **intro** usa MP3 de frase completa provistos por el usuario en `assets/` (reproducción directa, sin concatenación).
 
 ---
 
@@ -122,6 +123,22 @@ Arpegio dk·dk·dk → el jugador aprende el idioma de la lista:
 3. Instrucciones (repetir el idioma de sonidos)
 4. Accesibilidad (modo sin vista, contraste alto, volumen de voz)
 Scroll = click + nombre hablado · confirmar = ta-da · fin de lista = thud.
+
+### 1 bis · Intro hablada (arranque de cada partida) ✅
+Cuatro clips de **frase completa** en MP3 provistos por el usuario
+(`assets/Bienvenida.mp3` · `Explicacion.mp3` · `Quien sos.mp3` ·
+`Controles.mp3`, no concatenación palabra a palabra):
+1. **Bienvenida** — "Bienvenido, astronauta. Este es Marte Sónico…"
+2. **Explicación** — juego que se juega con los oídos; cada sonido es una pista.
+3. **Quién sos** — el astronauta y la misión (recolectar basalto y regolito).
+4. **Controles** — dirección, alrededores y recoger ("un botón, una acción").
+
+Cada clip se **repite en loop** (tras una pausa de silencio de ~1 s,
+`INTRO_REPEAT_PAUSE`) hasta que el jugador pulsa **cualquier gatillo**
+(LT/RT · Q/E) → suena el **éxito** y continúa al siguiente. Durante la intro la
+conducción queda **bloqueada** (`Player.input_enabled`). Al terminar arranca la
+misión con el primer dato útil: la roca más cercana delante. El botón
+**REINICIAR EXPERIENCIA** vuelve a decirla desde el principio.
 
 ### 2 · Rampa (briefing)
 Motor se apaga. Voz de Control Central con fondo de sala de control:
@@ -178,6 +195,7 @@ Al pisar la base con todo a bordo → **MISIÓN CUMPLIDA** (voz "misión cumplid
 - **Modo sin vista:** pantalla apagada; la misión se completa con LT (alrededores + guía de base) + RT (espectrómetro) + pasos.
 - **Contraste alto:** modo gráfico de formas grandes de color para baja visión (polish).
 - **Input simple:** cada botón = una sola acción (LT alrededores · RT espectrómetro).
+- **Onboarding hablado:** cada partida arranca con 4 clips de intro que se **repiten** hasta pulsar cualquier gatillo (LT/RT · Q/E); la conducción queda bloqueada hasta terminar.
 - **HUD:** subtítulos visibles + botón **REINICIAR EXPERIENCIA** (esquina inf. derecha) que vuelve misión, rocas y rover al arranque e invalida análisis/anuncios en vuelo.
 - **Sin presión:** 4 minutos configirables; modo "sin estrés" opcional (sin reloj).
 
@@ -187,9 +205,9 @@ Al pisar la base con todo a bordo → **MISIÓN CUMPLIDA** (voz "misión cumplid
 
 **Alcance:**
 - 1 nivel: campo abierto con 4 rocas (2 a recolectar: basalto + regolito) + 2 decorativas + 1 base-cápsula (inicio y meta).
-- 2 tipos catalogables con descripción por voz (WAV Piper); decorativas identificables pero no recolectables.
+- 2 tipos catalogables con descripción por voz (WAV ElevenLabs, voz Bella); decorativas identificables pero no recolectables.
 - Alrededores (LT) · espectrómetro (RT) · misión "recolectá todo y volvé a la base" · menús scrolleables (Fase 4). (Sonar de geometría y vara: fuera de la demo, se re-evalúan.)
-- Audio procedural + voces por palabra pre-generadas con Piper (WAV en `assets/voice/`).
+- Audio procedural + voces pre-generadas con ElevenLabs (WAV en `assets/voice/`).
 - Gamepad + teclado · export Windows.
 
 **Fuera de alcance v1 (polish):** modo contraste alto gráfico, catálogo completo, música en menú, brújula cardinal, mouse-look.

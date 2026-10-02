@@ -58,7 +58,8 @@ func _run() -> void:
 	_check(player.cell == Vector2i(13, 1), "reinicio: rover de vuelta en la base")
 	_check(player.facing == MapGrid.W, "reinicio: rover mirando al OESTE (estado de arranque)")
 	_check(player.position.is_equal_approx(MapGrid.center(Vector2i(13, 1))), "reinicio: rover centrado en su casilla")
-	_check("MARTE SÓNICO" in main._debug_label.text, "reinicio: HUD de arranque restaurado")
+	_check(main._intro_active and main._debug_label.text.begins_with("INTRO"),
+		"reinicio: la intro de arranque se re-dice (HUD: %s)" % main._debug_label.text)
 	_check(main._session == 1, "reinicio: sesión incrementada (invalida coroutines en vuelo)")
 
 	# Un análisis iniciado justo antes del reinicio NO puede completar la

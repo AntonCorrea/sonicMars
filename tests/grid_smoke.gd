@@ -44,6 +44,14 @@ func _run() -> void:
 	# espacio mundo debe dar (-1,0) con cualquier giro (flecha fija al OESTE).
 	_check(player.west_local().rotated(player.rotation).distance_to(Vector2(MapGrid.W)) < 0.001, "brújula local apunta al OESTE del mundo")
 
+	# La partida arranca con la intro hablada (conducción bloqueada): la doy por
+	# terminada para probar el movimiento con input real (en el juego se supera
+	# pulsando cualquier gatillo; ver intro_smoke).
+	scene._intro_active = false
+	scene._intro_advancing = false
+	scene._voice_player.stop()
+	player.input_enabled = true
+
 	# Movimiento y giros se prueban desde (7,4) mirando al norte (estado
 	# determinista): el spawn quedó en la base (13,1) mirando al oeste (al campo).
 	player.cell = Vector2i(7, 4)

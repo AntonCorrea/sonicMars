@@ -9,6 +9,10 @@ prescindible; estas frases son la interfaz principal.
   concatena **palabra por palabra** los WAVs de `assets/voice/` (ElevenLabs,
   voz Bella; antes Piper). Si una palabra no tiene WAV, usa el sintetizador
   formant como fallback.
+- **La intro de arranque es la excepción**: 4 clips de **frase completa** en
+  MP3 provistos por el usuario (`assets/Bienvenida.mp3` · `Explicacion.mp3` ·
+  `Quien sos.mp3` · `Controles.mp3`) reproducidos tal cual por `_voice_player`
+  (sin concatenación ni ritmo por palabra).
 - **Ritmo de la voz** (todo en `scripts/audio_lib.gd`): `WORD_GAP` = pausa entre
   palabras (0.03 s), recorte del silencio de relleno por palabra
   (`_trim_silence`, umbral `SILENCE_THRESHOLD`) y `VOICE_SPEED` = velocidad
@@ -16,11 +20,39 @@ prescindible; estas frases son la interfaz principal.
 - **Una frase a la vez**: `_say()` descarta el pedido si otra voz está sonando.
   Los anuncios (`_announce_all_collected`, `_announce_mission_done`) esperan a
   que la voz quede libre antes de hablar.
-- **No hay voz en el arranque**: la bienvenida ("MARTE SÓNICO — …") es solo
-  texto del HUD. Lo primero que se escucha es LT/Q o los pasos.
+- **Intro hablada al arrancar cada partida** (`main.gd` `_start_intro` →
+  `_intro_trigger` → `_on_intro_finished`): cada clip se **repite en loop**
+  hasta que el jugador pulsa **cualquier gatillo** (LT/RT · Q/E). Al pulsar
+  suena el **éxito** y continúa al siguiente clip; tras el cuarto arranca la
+  misión con el primer dato (la roca más cercana delante). La conducción queda
+  bloqueada durante la intro (`Player.input_enabled`). El botón REINICIAR
+  EXPERIENCIA vuelve a decirla desde la bienvenida.
 - Los números se dicen siempre **≥ 1** (nunca "cero") y coinciden con los pasos
   sobre el eje de la dirección dicha: 2 adelante + 1 al costado = "a 2 casillas
   delante".
+
+## Intro (arranque de cada partida)
+
+Cuatro clips de **frase completa en MP3** provistos por el usuario
+(`assets/Bienvenida.mp3` · `Explicacion.mp3` · `Quien sos.mp3` ·
+`Controles.mp3`) que se dicen en orden al comenzar cada partida:
+
+1. **Bienvenida** — "Bienvenido, astronauta. Este es Marte Sónico. La vista no
+   te va a hacer falta: todo lo que importa, lo vas a escuchar."
+2. **Explicación** — "Un juego de Marte que se juega con los oídos. Cada sonido
+   es una pista: la voz nombra la roca más cercana y a cuántas casillas está.
+   Buscá las muestras y volvé a la base sin mirar la pantalla."
+3. **Quién sos** — "Sos astronauta en Marte. Tu misión: recolectar basalto y
+   regolito. Encontrá las rocas, recogelas y volvé a la base con todas las
+   muestras."
+4. **Controles** — "Te dirigís con las palancas: la izquierda para girar, la
+   derecha para avanzar. El gatillo de alrededores escanea lo que te rodea. El
+   gatillo de recoger toma la roca que tengas delante. Un botón, una acción."
+
+Cada clip se **repite** (tras **una pausa de silencio de ~1 s**,
+`INTRO_REPEAT_PAUSE`) hasta pulsar **cualquier gatillo** (LT/RT · Q/E):
+suena el **éxito** (`kagateni__success2.wav`) y continúa al siguiente. Tras el
+cuarto, la intro termina y la misión arranca con la roca más cercana delante.
 
 ## Frases (9 plantillas)
 
@@ -88,7 +120,7 @@ cancelación**.
 ["mision", "cumplida"]                   → "misión cumplida"
 ```
 
-## Vocabulario (54 WAVs en assets/voice/)
+## Vocabulario (54 WAVs de palabras en assets/voice/)
 
 | Palabra | Uso | | Palabra | Uso |
 |---|---|---|---|---|
@@ -118,9 +150,10 @@ futuras frases.
 ## SFX (no son voz)
 
 Pasos (crunch) · bloqueo (thud) · giro (paneado 80/20 al oído del lado del
-giro) · **éxito de recogida** (`assets/kagateni__success2.wav`, antes del
-anuncio por voz) · **cancelación** (`assets/kagateni__cancel.wav`, antes de
-"no hay nada que recoger" y de "no recogible") · viento ambiente.
+giro) · **éxito** (`assets/kagateni__success2.wav`): antes del anuncio de
+recogida y al pulsar un gatillo durante la **intro** (avance de clip) ·
+**cancelación** (`assets/kagateni__cancel.wav`, antes de "no hay nada que
+recoger" y de "no recogible") · viento ambiente.
 
 ## Regenerar la voz con otro TTS (ElevenLabs)
 
@@ -133,5 +166,9 @@ al formant). Para re-baker con ElevenLabs:
 2. Escuchá una frase y si va, volcá sobre `assets/voice/` (guardá los WAV de
    piper por si querés volver).
 3. Forzá `compress/mode=0` en los `.import` (QOA → estática) y re-importá.
+
+La **intro** no se hornea: usa los MP3 de `assets/` provistos por el usuario
+(el `--intro` del tool hornea las frases como WAV si algún día querés re-baker
+una versión).
 
 Más detalles en la cabecera del script.

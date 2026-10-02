@@ -3,6 +3,7 @@ extends Node2D
 
 ## Movimiento en grilla · mando tanque.
 ## Palancas con función única: LS (Y) = avanzar/retroceder · RS (X) = girar 90° en eje.
+## Cruzeta del pad = flechas digitales (↑ avanzar · ↓ retroceder · ← girar izq · → girar der).
 ## Teclado WASD/flechas = respaldo completo (4 direcciones).
 ## Mantener = repetición con cadencia. Un comando en buffer mientras se mueve.
 ## Posición = vista: facing cardinal (N/S/E/O) es la única referencia espacial.
@@ -23,6 +24,10 @@ enum State { IDLE, MOVING, TURNING }
 var grid: MapGrid
 var cell := Vector2i(7, 4)
 var facing := MapGrid.N
+
+## Permite/deniega la conducción: bloqueada durante la intro hablada de arranque
+## (main._start_intro/_end_intro la apagan/prenden en cada partida).
+var input_enabled := true
 
 var state := State.IDLE
 var _from: Vector2 = Vector2.ZERO
@@ -56,6 +61,11 @@ func _physics_process(delta: float) -> void:
 		_try_execute(cmd)
 
 func _idle(delta: float) -> void:
+	if not input_enabled:
+		_held = ""
+		_queued_cmd = ""
+		_hold = 0.0
+		return
 	var dir := _held_dir()
 	if dir != "":
 		if dir == _held:
@@ -72,6 +82,11 @@ func _idle(delta: float) -> void:
 		_held = ""
 
 func _capture_busy_input() -> void:
+	if not input_enabled:
+		_held = ""
+		_queued_cmd = ""
+		_hold = 0.0
+		return
 	var dir := _held_dir()
 	if dir != _held:
 		if dir != "":
@@ -162,31 +177,41 @@ static func axes_to_command(ly: float, rx: float) -> String:
 		return "back" if v > 0.0 else "fwd"
 	return "right" if h > 0.0 else "left"
 
+## Traduce palancas analógicas + cruzeta digital al mismo comando dominante.
+## La cruzeta suma fuerza digital (1.0) a la palanca correspondiente y el
+## conjunto pasa por la misma dominante de axes_to_command. Helper puro y
+## determinista (testeable sin hardware).
+static func axes_dpad_to_command(ly: float, rx: float, dpad_ly: float, dpad_rx: float) -> String:
+	var v := clampf(ly + dpad_ly, -1.0, 1.0)
+	var h := clampf(rx + dpad_rx, -1.0, 1.0)
+	return Player.axes_to_command(v, h)
+
 func _axes_to_command(ly: float, rx: float) -> String:
 	return Player.axes_to_command(ly, rx)
 
-## Dirección sostenida actual: palancas únicas (LS avance · RS giro) + teclado.
-## En Android get_connected_joypads() puede devolver [] aunque el pad responda
-## en el id 0 (get_joy_axis funciona) → se barren ids 0..3 como respaldo.
+## Dirección sostenida actual: palancas únicas (LS avance · RS giro) + cruzeta
+## digital + teclado. En Android get_connected_joypads() puede devolver [] aunque
+## el pad responda en el id 0 (get_joy_axis funciona) → se barren ids 0..3.
 func _held_dir() -> String:
 	var a := _held_axes()
-	var cmd := Player.axes_to_command(a.x, a.y)
+	var dp := _held_dpad()
+	var cmd := Player.axes_dpad_to_command(a.y, a.x, dp.y, dp.x)
 	if cmd != "":
 		return cmd
-	var d := Vector2.ZERO
+	var k := Vector2.ZERO
 	if Input.is_action_pressed(&"move_forward"):
-		d.y -= 1.0
+		k.y -= 1.0
 	if Input.is_action_pressed(&"move_back"):
-		d.y += 1.0
+		k.y += 1.0
 	if Input.is_action_pressed(&"turn_left"):
-		d.x -= 1.0
+		k.x -= 1.0
 	if Input.is_action_pressed(&"turn_right"):
-		d.x += 1.0
-	if d.length_squared() < 0.25:
+		k.x += 1.0
+	if k.length_squared() < 0.25:
 		return ""
-	if absf(d.y) >= absf(d.x):
-		return "back" if d.y > 0.0 else "fwd"
-	return "right" if d.x > 0.0 else "left"
+	if absf(k.y) >= absf(k.x):
+		return "back" if k.y > 0.0 else "fwd"
+	return "right" if k.x > 0.0 else "left"
 
 ## Pads candidatos: lista conectada + ids 0..3 (respaldo Android).
 func _candidate_pads() -> PackedInt32Array:
@@ -203,6 +228,24 @@ func _held_axes() -> Vector2:
 		var rx := Input.get_joy_axis(id, JOY_AXIS_RIGHT_X)
 		if absf(ly) > AXIS_DEADZONE or absf(rx) > AXIS_DEADZONE:
 			return Vector2(ly, rx)
+	return Vector2.ZERO
+
+## Cruzeta digital (D-pad): flechas con la misma convención que las palancas
+## (x = eje de giro, y = eje de avance; arriba/izquierda = negativo). Primera
+## pad candidata con botones de cruzeta presionados.
+func _held_dpad() -> Vector2:
+	for id in _candidate_pads():
+		var d := Vector2.ZERO
+		if Input.is_joy_button_pressed(id, JOY_BUTTON_DPAD_UP):
+			d.y -= 1.0
+		if Input.is_joy_button_pressed(id, JOY_BUTTON_DPAD_DOWN):
+			d.y += 1.0
+		if Input.is_joy_button_pressed(id, JOY_BUTTON_DPAD_LEFT):
+			d.x -= 1.0
+		if Input.is_joy_button_pressed(id, JOY_BUTTON_DPAD_RIGHT):
+			d.x += 1.0
+		if d != Vector2.ZERO:
+			return d
 	return Vector2.ZERO
 
 # Depuración visual (modo contraste alto en fase posterior).

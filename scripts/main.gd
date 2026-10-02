@@ -3,6 +3,9 @@ extends Node2D
 ## Orquestador principal — Fase 2 (retoque escenario):
 ## - Buses de audio (Ambiente / SFX / Voz) + layout desde default_bus_layout.tres
 ## - Viento de superficie (loop procedural)
+## - INTRO hablada al comenzar cada partida: 4 clips (bienvenida, explicación,
+##   quién sos, controles). Cada uno se repite hasta pulsar CUALQUIER gatillo
+##   (LT/RT · Q/E) → suena el éxito y continúa al siguiente.
 ## - Movimiento en grilla (MapGrid 16×9 = ventana completa) + sonidos de paso y bloqueo
 ## - ALREDEDORES (LT / Q): voz que nombra la roca más cercana y su dirección relativa
 ## - RECOGER (RT / E): éxito → voz "recogida", sólo con la roca en la casilla delante
@@ -62,6 +65,29 @@ var _spectro_busy := false
 var _session := 0
 var _hud_button: Button
 
+## Intro hablada del arranque de cada partida: 4 clips (bienvenida,
+## explicación, quién sos, controles) en MP3 provistos por el usuario
+## (carpeta assets/). Cada uno se REPITE hasta que el jugador pulsa CUALQUIER
+## gatillo (LT/RT = Q/E); al pulsar suena el éxito y pasa al siguiente.
+const INTRO_PATHS := [
+	"res://assets/Bienvenida.mp3",
+	"res://assets/Explicacion.mp3",
+	"res://assets/Quien sos.mp3",
+	"res://assets/Controles.mp3",
+]
+
+## Pausa de silencio antes de repetir un clip de la intro que terminó sin gatillo.
+const INTRO_REPEAT_PAUSE := 1.0
+
+var _intro_active := false
+var _intro_idx := -1
+## Bloquea avances mientras suena el éxito (un gatillo por vez, sin skips).
+var _intro_advancing := false
+## Cache de streams de la intro (se cargan una sola vez por sesión).
+var _intro_streams := {}
+## Repeticiones del clip actual sin gatillo (contador para el smoke test).
+var _intro_replays := 0
+
 func _ready() -> void:
 	_setup_audio_buses()
 	_build_grid()
@@ -85,6 +111,8 @@ func _ready() -> void:
 	_voice_player = AudioStreamPlayer.new()
 	_voice_player.bus = "Voz"
 	add_child(_voice_player)
+	# Cada clip de la intro se repite hasta que se pulsa un gatillo.
+	_voice_player.finished.connect(_on_intro_finished)
 
 	_wind_player = AudioStreamPlayer.new()
 	_wind_player.bus = "Ambiente"
@@ -109,6 +137,8 @@ func _ready() -> void:
 	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 	for pad in Input.get_connected_joypads():
 		_on_joy_connection_changed(pad, true)
+
+	_start_intro()
 
 func _make_sfx_player(stream: AudioStream) -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()
@@ -168,10 +198,103 @@ func _restart_experience() -> void:
 	_player.reset_to(SPAWN_CELL, MapGrid.W)
 	_debug_label.text = _base_label_text
 	queue_redraw()
+	# Cada partida comienza de nuevo con la intro hablada.
+	_start_intro()
+
+## ---- Intro hablada (arranque de cada partida) ----
+
+func _start_intro() -> void:
+	_intro_active = true
+	_intro_advancing = false
+	_intro_idx = 0
+	_player.input_enabled = false
+	_play_intro(_intro_idx)
+
+func _play_intro(index: int) -> void:
+	_debug_label.text = "INTRO %d/%d · pulsá cualquier gatillo (LT/RT · Q/E)" % [index + 1, INTRO_PATHS.size()]
+	var stream := _intro_load(INTRO_PATHS[index])
+	_voice_player.stop()
+	_voice_player.stream = stream
+	_voice_player.play()
+
+func _intro_load(path: String) -> AudioStream:
+	if not _intro_streams.has(path):
+		_intro_streams[path] = load(path)
+	return _intro_streams[path]
+
+## Cualquier gatillo durante la intro: suena el éxito y continúa al siguiente
+## clip (o termina la intro y arranca la misión).
+func _intro_trigger() -> void:
+	if not _intro_active or _intro_advancing:
+		return
+	_intro_advancing = true
+	_voice_player.stop()
+	_success_player.play()
+	_intro_idx += 1
+	if _intro_idx >= INTRO_PATHS.size():
+		_end_intro()
+	else:
+		_advance_intro_after_success()
+
+## Espera la cola del éxito antes de arrancar el clip siguiente (no se pisan).
+func _advance_intro_after_success() -> void:
+	var sess := _session
+	await get_tree().create_timer(_sfx_lead(_success_player)).timeout
+	if sess != _session:
+		return
+	if not _intro_active:
+		return
+	_intro_advancing = false
+	_play_intro(_intro_idx)
+
+func _end_intro() -> void:
+	var sess := _session
+	_intro_active = false
+	_intro_advancing = false
+	_intro_idx = -1
+	_player.input_enabled = true
+	_debug_label.text = _base_label_text
+	await get_tree().create_timer(_sfx_lead(_success_player)).timeout
+	if sess != _session:
+		return
+	# La misión arranca con el primer dato útil: la roca más cercana delante.
+	_describe_surroundings()
+
+## La intro espera en loop: al terminar un clip sin gatillo, hay una PAUSA de
+## silencio (INTRO_REPEAT_PAUSE) y el clip se repite. Si durante la pausa se
+## pulsa un gatillo, la repetición se cancela (el gatillo avanza al siguiente).
+func _on_intro_finished() -> void:
+	_intro_repeat_after_pause()
+
+func _intro_repeat_after_pause() -> void:
+	if not _intro_active or _intro_advancing:
+		return
+	var idx := _intro_idx
+	if idx < 0 or idx >= INTRO_PATHS.size():
+		return
+	if _voice_player.stream != _intro_load(INTRO_PATHS[idx]):
+		return
+	await get_tree().create_timer(INTRO_REPEAT_PAUSE).timeout
+	# Re-valida antes de repetir: el gatillo pudo avanzar o reiniciar la intro.
+	if not _intro_active or _intro_advancing or _intro_idx != idx:
+		return
+	if _voice_player.stream != _intro_load(INTRO_PATHS[idx]):
+		return
+	_voice_player.play()
+	_intro_replays += 1
 
 func _process(delta: float) -> void:
 	_poll_right_trigger()
 	_poll_left_trigger()
+
+	if _intro_active:
+		# Durante la intro sólo importa el gatillo: LT/RT (o Q/E) avanzan al
+		# siguiente clip. La conducción está bloqueada en el Player.
+		if Input.is_action_just_pressed(&"interact") \
+				or Input.is_action_just_pressed(&"surroundings"):
+			_intro_trigger()
+		_update_pad_readout()
+		return
 
 	if Input.is_action_just_pressed(&"interact"):
 		_try_interact()
@@ -296,7 +419,10 @@ func _consume_right_trigger(rt: float) -> void:
 	if rt > 0.4:
 		if not _rt_down:
 			_rt_down = true
-			_try_interact()
+			if _intro_active:
+				_intro_trigger()
+			else:
+				_try_interact()
 	else:
 		_rt_down = false
 
@@ -304,7 +430,10 @@ func _consume_left_trigger(lt: float) -> void:
 	if lt > 0.4:
 		if not _lt_down:
 			_lt_down = true
-			_describe_surroundings()
+			if _intro_active:
+				_intro_trigger()
+			else:
+				_describe_surroundings()
 	else:
 		_lt_down = false
 

@@ -23,6 +23,14 @@ func _run() -> void:
 	var main = scene
 	var player: Player = scene.get_node("Player")
 
+	# La intro hablada de arranque secuestra los gatillos (avanza de clip): la
+	# doy por terminada para probar el mapeo físico LT/RT (en el juego se
+	# supera con cualquier gatillo; ver intro_smoke).
+	main._intro_active = false
+	main._intro_advancing = false
+	main._voice_player.stop()
+	player.input_enabled = true
+
 	# --- Mapeo del input map ---
 	var surr := InputMap.action_get_events(&"surroundings")
 	_check(surr.size() == 1, "surroundings: 1 sola entrada (LB removido)")
