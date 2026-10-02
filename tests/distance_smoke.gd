@@ -25,17 +25,19 @@ func _run() -> void:
 	var main = scene
 	var player: Player = scene.get_node("Player")
 
-	# Dejo solo BASALTO (4,2) detectable para probar geometrías precisas.
+	# Dejo solo BASALTO (10,1) detectable para probar geometrías precisas.
 	for i in range(1, main._rock_data.size()):
 		main._rock_data[i].collected = true
 
 	# (pos_jugador, facing, fragmento esperado del HUD)
 	var casos := [
-		[Vector2i(2, 1), MapGrid.E, "delante 2"],  # 2 adelante, 1 derecha → 2 (caso usuario)
-		[Vector2i(2, 0), MapGrid.E, "delante 2"],  # 2 adelante, 2 derecha → 2 (antes 3)
-		[Vector2i(1, 1), MapGrid.E, "delante 3"],  # 3 adelante, 1 derecha → 3
-		[Vector2i(4, 1), MapGrid.E, "derecha 1"],  # justo a la derecha → 1
-		[Vector2i(4, 3), MapGrid.E, "izquierda 1"], # justo a la izquierda → 1
+		[Vector2i(8, 1), MapGrid.E, "delante 2"],  # 2 adelante, 0 costado → 2
+		[Vector2i(8, 0), MapGrid.E, "delante 2"],  # 2 adelante, 1 derecha → 2 (caso usuario)
+		[Vector2i(8, 3), MapGrid.E, "delante 2"],  # 2 adelante, 2 izquierda → 2 (antes 3)
+		[Vector2i(7, 1), MapGrid.E, "delante 3"],  # 3 adelante, 0 costado → 3
+		[Vector2i(9, 0), MapGrid.E, "delante 1"],  # 1 adelante, 1 derecha → 1
+		[Vector2i(10, 0), MapGrid.E, "derecha 1"],  # justo a la derecha → 1
+		[Vector2i(10, 2), MapGrid.E, "izquierda 1"], # justo a la izquierda → 1
 	]
 	for c in casos:
 		player.cell = c[0]

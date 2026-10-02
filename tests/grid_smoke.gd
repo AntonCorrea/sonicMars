@@ -82,9 +82,9 @@ func _run() -> void:
 	_check(player.facing == MapGrid.turn_right(before_r), "giro 90° derecha")
 	_check(_loudest_channel(scene._turn_player.stream) == "R", "giro a la derecha → sonido mayormente en el oído derecho")
 
-	# Bloqueo: posiciono delante de la roca de basalto en (4,2)
+	# Bloqueo: posiciono delante de la roca de basalto en (10,1)
 	Input.action_release(&"move_forward")
-	player.cell = Vector2i(4, 3)
+	player.cell = Vector2i(10, 2)
 	player.facing = MapGrid.N
 	player.position = MapGrid.center(player.cell)
 	player.state = Player.State.IDLE
@@ -95,7 +95,7 @@ func _run() -> void:
 		await physics_frame
 	Input.action_release(&"move_forward")
 	_check(_blocked > blocked_before, "paso contra roca = bloqueado (sonido)")
-	_check(player.cell == Vector2i(4, 3), "no avanzó a celda bloqueada")
+	_check(player.cell == Vector2i(10, 2), "no avanzó a celda bloqueada")
 
 	print("RESULTADO: %d fallos" % _failures)
 	quit(1 if _failures > 0 else 0)

@@ -84,31 +84,39 @@ func _run() -> void:
 	_check(main._relative_dir(Vector2i(10, 4)) == "delante", "E: al este = delante")
 
 	# Alrededores: nombra sólo la roca más cercana + dirección.
-	player.cell = Vector2i(7, 4)
-	player.facing = MapGrid.N
+	# Desde (12,5) mirando al OESTE: regolito (10,5) a 2 delante.
+	player.cell = Vector2i(12, 5)
+	player.position = MapGrid.center(player.cell)
+	player.facing = MapGrid.W
+	player.rotation = MapGrid.forward_angle(player.facing)
 	main._describe_surroundings()
 	var around: String = main._debug_label.text.to_lower()
 	_check(around.contains("alrededor"), "alrededores actualiza la etiqueta")
-	_check("sedimentaria" in around, "alrededores nombra la roca más cercana")
+	_check("regolito" in around, "alrededores nombra la roca más cercana")
 	_check("delante" in around, "alrededores da dirección relativa")
 	_check(not ("base" in around), "alrededores ya no menciona la base")
 
-	# Cono frontal: mirando al este ignora la roca cercana que quedó a un lado
-	# (sedimentaria) y toma la más cercana dentro del cono (ignea-b).
+	# Cono frontal: desde (7,5) mirando al este, la sedimentaria (6,7) queda
+	# fuera del cono (detrás-izquierda) y se nombra la del cono: regolito.
+	player.cell = Vector2i(7, 5)
+	player.position = MapGrid.center(player.cell)
 	player.facing = MapGrid.E
+	player.rotation = MapGrid.forward_angle(player.facing)
 	main._describe_surroundings()
 	var around_e: String = main._debug_label.text.to_lower()
-	_check("ignea" in around_e, "alrededores sólo escanea el cono frontal")
+	_check("regolito" in around_e, "alrededores sólo escanea el cono frontal")
 	_check(not ("sedimentaria" in around_e), "alrededores ignora roca fuera del cono")
 
 	# Re-activo la detección de basalto para el test del cono de costado
 	# (la roca recolectada arriba ya no se detecta por diseño).
 	main._rock_data[0].collected = false
 
-	# Costados: el cono (3 casillas de ancho en fila cercana) incluye rocas al lado.
-	player.cell = Vector2i(5, 2)
+	# Costados: desde (10,2) mirando al este, el basalto (10,1) queda justo
+	# a la izquierda (1 casilla lateral) y entra en el cono.
+	player.cell = Vector2i(10, 2)
 	player.position = MapGrid.center(player.cell)
-	player.facing = MapGrid.N
+	player.facing = MapGrid.E
+	player.rotation = MapGrid.forward_angle(player.facing)
 	main._describe_surroundings()
 	var around_side: String = main._debug_label.text.to_lower()
 	_check("basalto" in around_side, "alrededores cubre el costado (3 casillas de ancho)")

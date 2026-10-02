@@ -504,11 +504,11 @@ func _add_wall(center: Vector2, size: Vector2) -> void:
 func _build_objects() -> void:
 	# 5 rocas: 2 catalogables (basalto, regolito) + 3 decorativas.
 	var rock_cells := [
-		["BASALTO", Vector2i(4, 2), true],
-		["OBSIDIANA", Vector2i(11, 3), false],
-		["IGNEA-B", Vector2i(10, 6), false],
-		["SEDIMENTARIA", Vector2i(7, 1), false],
-		["REGOLITO", Vector2i(2, 6), true],
+		["BASALTO", Vector2i(10, 1), true],
+		["OBSIDIANA", Vector2i(2, 4), false],
+		["IGNEA-B", Vector2i(4, 6), false],
+		["SEDIMENTARIA", Vector2i(6, 7), false],
+		["REGOLITO", Vector2i(10, 5), true],
 	]
 	for r in rock_cells:
 		var cell_pos: Vector2i = r[1]
