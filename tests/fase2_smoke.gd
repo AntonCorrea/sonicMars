@@ -122,6 +122,22 @@ func _run() -> void:
 	_check("basalto" in around_side, "alrededores cubre el costado (3 casillas de ancho)")
 	_check("izquierda" in around_side, "alrededores indica el costado relativo")
 
+	# Espectrómetro: la roca al costado NO se recoge. RT sólo actúa sobre la
+	# casilla que el rover enfrenta (la de delante).
+	player.cell = Vector2i(10, 2)   # basalto (10,1) queda a la izquierda
+	player.position = MapGrid.center(player.cell)
+	player.facing = MapGrid.E
+	player.rotation = MapGrid.forward_angle(player.facing)
+	main._try_interact()
+	_check(not main._rock_data[0].collected, "espectrómetro ignora la roca del costado (sólo casilla delante)")
+	_check(main._debug_label.text == "NADA DELANTE", "RT sin roca adelante → HUD 'NADA DELANTE'")
+
+	# De frente sí: girado hacia el basalto se inicia el análisis.
+	player.facing = MapGrid.N
+	player.rotation = MapGrid.forward_angle(player.facing)
+	main._try_interact()
+	_check(main._spectro_busy, "RT con roca en la casilla delante arranca el análisis")
+
 	# Volumen parejo: dos frases de distinta longitud suenan igual de fuerte.
 	var rms_a := _rms(AudioLib.speak_words(["roca", "de", "basalto"]))
 	var rms_b := _rms(AudioLib.speak_words([

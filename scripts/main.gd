@@ -4,8 +4,8 @@ extends Node2D
 ## - Buses de audio (Ambiente / SFX / Voz) + layout desde default_bus_layout.tres
 ## - Viento de superficie (loop procedural)
 ## - Movimiento en grilla (MapGrid 16×9 = ventana completa) + sonidos de paso y bloqueo
-## - ALREDEDORES (LT / R): voz que nombra la roca más cercana y su dirección relativa
-## - ESPECTRÓMETRO (RT / E): chirrido → voz → contenedor (muestra guardada)
+## - ALREDEDORES (LT / Q): voz que nombra la roca más cercana y su dirección relativa
+## - ESPECTRÓMETRO (RT / E): chirrido → voz → contenedor, sólo con la roca en la casilla delante (muestra guardada)
 ## - Base-cápsula: inicio de la misión y punto de entrega (victoria al volver con todas las muestras)
 ## - Sonar de geometría (pulso) y vara: removidos por ahora (se re-evalúan)
 ## - Sin beacons Geiger (removidos temporalmente) · sin cráteres
@@ -398,26 +398,26 @@ func _describe_base() -> void:
 	_say(["base", "a", _cells_word(cells), "casillas", dir])
 
 ## ---- Espectrómetro (RT / E) ----
+## Sólo actúa sobre la roca de la casilla justo delante del rover (la que el
+## jugador enfrenta): costados, diagonales y rocas lejanas se ignoran. Primero
+## hay que orientarse con LT y luego recoger de frente.
 
-func _nearest_rock_nearby() -> Dictionary:
-	var best: Dictionary = {}
-	var bd := 2
+func _rock_ahead() -> Dictionary:
+	var ahead: Vector2i = _player.cell + _player.facing
 	for block in _rock_data:
 		if block.collected:
 			continue
-		var dc := maxi(abs(block.cell.x - _player.cell.x), abs(block.cell.y - _player.cell.y))
-		if dc <= 1 and dc < bd:
-			bd = dc
-			best = block
-	return best
+		if block.cell == ahead:
+			return block
+	return {}
 
 func _try_interact() -> void:
 	if _spectro_busy:
 		return
 	var sess := _session
-	var block := _nearest_rock_nearby()
+	var block := _rock_ahead()
 	if block.is_empty():
-		_debug_label.text = "NADA CERCA"
+		_debug_label.text = "NADA DELANTE"
 		return
 	if not block.catalogable:
 		_debug_label.text = "ENFRENTE: %s (decorativa, no catalogable)" % block.type
