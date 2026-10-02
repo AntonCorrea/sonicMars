@@ -15,5 +15,5 @@ offset_left = 16.0
 offset_top = 16.0
 offset_right = 1264.0
 offset_bottom = 60.0
-theme_override_colors/font_color = Color(0.9, 0.75, 0.4, 1)
-text = "MARTE SÓNICO — recolectá todas las muestras y volvé a la base · Q/LT alrededores · E/RT espectrómetro"
+theme_override_colors/font_color = Color(1, 0.97, 0.9, 1)
+text = "MARTE SÓNICO — recolectá todas las muestras y volvé a la base · Q/LT alrededores · E/RT recoger"

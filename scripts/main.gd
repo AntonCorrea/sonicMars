@@ -5,7 +5,7 @@ extends Node2D
 ## - Viento de superficie (loop procedural)
 ## - Movimiento en grilla (MapGrid 16×9 = ventana completa) + sonidos de paso y bloqueo
 ## - ALREDEDORES (LT / Q): voz que nombra la roca más cercana y su dirección relativa
-## - ESPECTRÓMETRO (RT / E): chirrido → voz → contenedor, sólo con la roca en la casilla delante (muestra guardada)
+## - RECOGER (RT / E): éxito → voz "recogida", sólo con la roca en la casilla delante
 ## - Base-cápsula: inicio de la misión y punto de entrega (victoria al volver con todas las muestras)
 ## - Sonar de geometría (pulso) y vara: removidos por ahora (se re-evalúan)
 ## - Sin beacons Geiger (removidos temporalmente) · sin cráteres
@@ -25,8 +25,8 @@ var _wind_player: AudioStreamPlayer
 var _step_player: AudioStreamPlayer
 var _blocked_player: AudioStreamPlayer
 var _voice_player: AudioStreamPlayer
-var _spectro_player: AudioStreamPlayer
-var _container_player: AudioStreamPlayer
+var _success_player: AudioStreamPlayer
+var _cancel_player: AudioStreamPlayer
 var _turn_player: AudioStreamPlayer
 
 var _rt_down := false
@@ -79,8 +79,8 @@ func _ready() -> void:
 	_step_player = _make_sfx_player(AudioLib.crunch())
 	_blocked_player = _make_sfx_player(AudioLib.thud())
 	_turn_player = _make_sfx_player(AudioLib.turn())
-	_spectro_player = _make_sfx_player(AudioLib.spectro_chirp())
-	_container_player = _make_sfx_player(AudioLib.container_kchk())
+	_success_player = _make_sfx_player(load("res://assets/kagateni__success2.wav"))
+	_cancel_player = _make_sfx_player(load("res://assets/kagateni__cancel.wav"))
 
 	_voice_player = AudioStreamPlayer.new()
 	_voice_player.bus = "Voz"
@@ -93,8 +93,14 @@ func _ready() -> void:
 	add_child(_wind_player)
 	_wind_player.play()
 
-	_debug_label.text = "MARTE SÓNICO — recolectá todas las muestras y volvé a la base · LT/Q = alrededores · RT/E = espectrómetro · LS/RS = conducir"
+	_debug_label.text = "MARTE SÓNICO — recolectá todas las muestras y volvé a la base · LT/Q = alrededores · RT/E = recoger · LS/RS = conducir"
 	_base_label_text = _debug_label.text
+	# HUD legible con visión reducida: texto grande, casi blanco, con contorno
+	# negro para que se lea sobre rocas/base brillantes.
+	_debug_label.add_theme_font_size_override("font_size", 22)
+	_debug_label.add_theme_color_override("font_color", Color(1.0, 0.97, 0.9))
+	_debug_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0))
+	_debug_label.add_theme_constant_override("outline_size", 8)
 	_setup_hud_button()
 
 	# Mappings custom (pads no reconocidos) + diagnóstico de gamepads.
@@ -115,10 +121,27 @@ func _make_sfx_player(stream: AudioStream) -> AudioStreamPlayer:
 func _setup_hud_button() -> void:
 	var btn := Button.new()
 	btn.text = "REINICIAR EXPERIENCIA"
-	btn.add_theme_font_size_override("font_size", 16)
+	btn.add_theme_font_size_override("font_size", 18)
 	btn.custom_minimum_size = Vector2(270, 46)
 	btn.size = Vector2(270, 46)
 	btn.position = Vector2(MapGrid.COLS * MapGrid.CELL - 270.0 - 12.0, MapGrid.ROWS * MapGrid.CELL - 46.0 - 12.0)
+	# Alto contraste para visión reducida: amarillo brillante + texto negro,
+	# borde blanco y esquinas redondeadas (blanco sobre casi negro en reposo).
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(1.0, 0.83, 0.2)
+	sb.set_corner_radius_all(8)
+	sb.set_border_width_all(2)
+	sb.border_color = Color(1.0, 1.0, 1.0)
+	btn.add_theme_stylebox_override("normal", sb)
+	var hover := sb.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(1.0, 0.93, 0.45)
+	btn.add_theme_stylebox_override("hover", hover)
+	var pressed := sb.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.8, 0.62, 0.1)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_color_override("font_color", Color(0.05, 0.05, 0.05))
+	btn.add_theme_color_override("font_hover_color", Color(0.05, 0.05, 0.05))
+	btn.add_theme_color_override("font_pressed_color", Color(0.05, 0.05, 0.05))
 	btn.pressed.connect(_restart_experience)
 	add_child(btn)
 	_hud_button = btn
@@ -130,7 +153,8 @@ func _restart_experience() -> void:
 	_log_pad("RESTART experiencia")
 	_session += 1
 	_voice_player.stop()
-	_spectro_player.stop()
+	_success_player.stop()
+	_cancel_player.stop()
 	_collected = 0
 	_catalog_count = 0
 	_mission_done = false
@@ -314,6 +338,12 @@ func _say(words: Array) -> void:
 	_voice_player.stream = AudioLib.speak_words(words)
 	_voice_player.play()
 
+## Espera casi toda la duración del SFX antes de que la voz tome la palabra:
+## le saca ~0.1 s de cola para no dejar un hueco muerto entre sonido y voz.
+func _sfx_lead(player: AudioStreamPlayer) -> float:
+	var len := player.stream.get_length() if player.stream else 0.0
+	return maxf(0.05, len - 0.1)
+
 ## ---- ALREDEDORES (LT / R) ----
 
 ## Dirección relativa al cuerpo (facing): delante/detras/izquierda/derecha.
@@ -418,20 +448,24 @@ func _try_interact() -> void:
 	var block := _rock_ahead()
 	if block.is_empty():
 		_debug_label.text = "NADA DELANTE"
+		_cancel_player.play()
+		await get_tree().create_timer(_sfx_lead(_cancel_player)).timeout
+		if sess != _session:
+			return
+		_say(["no", "hay", "nada", "que", "recoger"])
 		return
 	if not block.catalogable:
-		_debug_label.text = "ENFRENTE: %s (decorativa, no catalogable)" % block.type
-		_say(["roca", "de", block.voice, "no", "catalogable"])
+		_debug_label.text = "ENFRENTE: %s (decorativa, no recogible)" % block.type
+		_cancel_player.play()
+		await get_tree().create_timer(_sfx_lead(_cancel_player)).timeout
+		if sess != _session:
+			return
+		_say(["roca", "de", block.voice, "no", "recogible"])
 		return
 	_spectro_busy = true
-	_spectro_player.pitch_scale = randf_range(0.95, 1.05)
-	_spectro_player.play()
-	await get_tree().create_timer(0.4).timeout
-	if sess != _session:
-		_spectro_busy = false
-		return
-	_say(["roca", "de", block.voice, "muestra", "analizada"])
-	await get_tree().create_timer(1.5).timeout
+	# Recogida exitosa: sonido de éxito y después la voz anuncia la muestra.
+	_success_player.play()
+	await get_tree().create_timer(_sfx_lead(_success_player)).timeout
 	if sess != _session:
 		_spectro_busy = false
 		return
@@ -441,9 +475,8 @@ func _try_interact() -> void:
 	# libera su casilla (el camino de vuelta queda abierto).
 	block.node.visible = false
 	grid.set_blocked(block.cell, false)
-	_container_player.pitch_scale = [1.0, 0.85, 1.2][mini(_collected - 1, 2)]
-	_container_player.play()
 	_debug_label.text = "MUESTRA %d DE %d — %s" % [_collected, _catalog_count, block.type]
+	_say(["roca", "de", block.voice, "recogida"])
 	if _collected >= _catalog_count:
 		_announce_all_collected()
 	_spectro_busy = false
@@ -568,35 +601,40 @@ func _add_base(pos: Vector2, half: float) -> Node2D:
 	return base
 
 func _draw() -> void:
-	# Depuración visual (modo dev).
+	# Depuración visual (modo dev) — paleta de ALTO CONTRASTE para visión
+	# reducida: fondo casi negro, objetos en colores brillantes (amarillo =
+	# rocas · cian = base · naranja con borde blanco = rover) y texto casi
+	# blanco. Se distinguen por forma + luminancia, no sólo por color.
 	var w := MapGrid.COLS * MapGrid.CELL
 	var h := MapGrid.ROWS * MapGrid.CELL
-	draw_rect(Rect2(Vector2.ZERO, Vector2(w, h)), Color(0.1, 0.06, 0.03), false, 2.0)
-	draw_rect(Rect2(Vector2.ZERO, Vector2(w, h)), Color(0.25, 0.2, 0.1), false, 1.0)
-	var line_color := Color(0.35, 0.28, 0.16, 0.5)
+	draw_rect(Rect2(Vector2.ZERO, Vector2(w, h)), Color(0.06, 0.06, 0.09), true)
+	draw_rect(Rect2(Vector2.ZERO, Vector2(w, h)), Color(0.95, 0.95, 0.97), false, 3.0)
+	var line_color := Color(0.85, 0.85, 0.9, 0.35)
 	for x in range(MapGrid.COLS + 1):
 		var px := x * MapGrid.CELL
 		draw_line(Vector2(px, 0), Vector2(px, h), line_color, 1.0)
 	for y in range(MapGrid.ROWS + 1):
 		var py := y * MapGrid.CELL
 		draw_line(Vector2(0, py), Vector2(w, py), line_color, 1.0)
-	# Celdas bloqueadas (paredes y rocas): sombreado
-	var blocked_color := Color(0.55, 0.38, 0.2, 0.35)
+	# Celdas bloqueadas (paredes y rocas): sombreado ámbar translúcido
+	var blocked_color := Color(1.0, 0.8, 0.3, 0.35)
 	for c in grid.blocked_cells():
 		var cell_rect := Rect2(c.x * MapGrid.CELL + 3, c.y * MapGrid.CELL + 3, MapGrid.CELL - 6, MapGrid.CELL - 6)
 		draw_rect(cell_rect, blocked_color, true)
 	for rock in _rocks:
-		draw_circle(rock.position, 30.0, Color(0.7, 0.3, 0.1))
+		draw_circle(rock.position, 30.0, Color(1.0, 0.85, 0.25))
+		draw_arc(rock.position, 30.0, 0.0, TAU, 48, Color(1.0, 1.0, 1.0), 3.0)
 	if _base:
-		draw_circle(_base.position, 50.0, Color(0.2, 0.5, 0.8))
+		draw_circle(_base.position, 50.0, Color(0.3, 0.85, 1.0))
+		draw_arc(_base.position, 50.0, 0.0, TAU, 64, Color(1.0, 1.0, 1.0), 3.0)
 		_draw_base_door(_base.position)
 
 # Puerta de la cápsula — sólo figurada (sin función por ahora).
 func _draw_base_door(base_pos: Vector2) -> void:
 	var door_center := base_pos + Vector2(0, 45)
-	draw_rect(Rect2(door_center - Vector2(28, 5), Vector2(56, 10)), Color(0.08, 0.1, 0.14), true)
-	draw_rect(Rect2(door_center - Vector2(28, 5), Vector2(56, 10)), Color(0.55, 0.7, 0.85), false, 1.5)
-	draw_line(door_center + Vector2(0, -3), door_center + Vector2(0, 3), Color(0.4, 0.55, 0.7), 1.5)
+	draw_rect(Rect2(door_center - Vector2(28, 5), Vector2(56, 10)), Color(0.03, 0.05, 0.1), true)
+	draw_rect(Rect2(door_center - Vector2(28, 5), Vector2(56, 10)), Color(0.85, 0.95, 1.0), false, 2.5)
+	draw_line(door_center + Vector2(0, -3), door_center + Vector2(0, 3), Color(0.9, 0.98, 1.0), 2.5)
 
 ## ---- Audio buses ----
 

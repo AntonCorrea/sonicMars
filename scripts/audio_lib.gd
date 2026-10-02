@@ -143,6 +143,7 @@ const WORDS := {
 	"cerca":       ["s", "e", "r", "k", "a"],
 	"delante":     ["d", "e", "l", "a", "n", "t", "e"],
 	"detras":      ["d", "e", "t", "r", "a", "s"],
+	"hay":         ["a", "i"],
 	"izquierda":   ["i", "s", "k", "i", "e", "r", "d", "a"],
 	"derecha":     ["d", "e", "r", "e", "ch", "a"],
 	"y":           ["i"],
@@ -151,6 +152,9 @@ const WORDS := {
 	"todas":       ["t", "o", "d", "a", "s"],
 	"las":         ["l", "a", "s"],
 	"muestras":    ["m", "u", "e", "s", "t", "r", "a", "s"],
+	"recogida":    ["r", "e", "k", "o", "g", "i", "d", "a"],
+	"recoger":     ["r", "e", "k", "o", "g", "e", "r"],
+	"recogible":   ["r", "e", "k", "o", "g", "i", "b", "l", "e"],
 	"recolectadas":["r", "e", "k", "o", "l", "e", "k", "t", "a", "d", "a", "s"],
 	"volver":      ["b", "o", "l", "b", "e", "r"],
 	"mision":      ["m", "i", "s", "i", "o", "n"],
@@ -169,6 +173,7 @@ const WORDS := {
 	"doce":        ["d", "o", "s", "e"],
 	"trece":       ["t", "r", "e", "s", "e"],
 	"catorce":     ["k", "a", "t", "o", "r", "s", "e"],
+	"que":         ["k", "e"],
 	"quince":      ["k", "i", "n", "s", "e"],
 }
 
@@ -341,7 +346,7 @@ static func speak_words(words: Array) -> AudioStreamWAV:
 	var gap := int(VOICE_RATE * WORD_GAP)
 	for w in words:
 		var audio := _word_audio(str(w))
-		var samples := _wave_samples(audio)
+		var samples := _trim_silence(_wave_samples(audio))
 		if full.size() > 0 and samples.size() > 0:
 			full.resize(full.size() + gap)
 		var base := full.size()
@@ -350,6 +355,8 @@ static func speak_words(words: Array) -> AudioStreamWAV:
 			full[base + i] = samples[i]
 	if full.is_empty():
 		full.resize(1)
+	if VOICE_SPEED > 1.0:
+		full = _resample(full, VOICE_SPEED)
 	var edge := int(VOICE_RATE * 0.006)
 	for i in mini(edge, full.size() / 2):
 		full[i] *= float(i) / edge
@@ -379,9 +386,52 @@ static func speak_words(words: Array) -> AudioStreamWAV:
 
 const VOICE_DIR := "res://assets/voice/"
 const VOICE_RATE := 22050
-const WORD_GAP := 0.09
+const WORD_GAP := 0.03
+# Los WAV de TTS traen relleno silencioso (p.ej. "a.wav" ≈ 0.56 s con la vocal
+# ocupando ~0.35 s): recortar el silencio por palabra + un gap chico hacen que
+# la frase suene natural y rápida en lugar de lenta.
+const SILENCE_THRESHOLD := 0.004  # |amplitude| > esto se considera audible
+const KEEP_HEAD := 0.02           # s de margen antes de la 1.ª muestra audible
+const KEEP_TAIL := 0.03           # s de margen tras la última muestra audible
+# Velocidad final de la frase (resample lineal). >1 = más rápida (y un poco
+# más aguda, inseparable en resample). 1.15 ≈ hablar un 15% más rápido.
+const VOICE_SPEED := 1.15
 
 static var _word_cache := {}
+
+## Resample lineal de una frase: acelera (VOICE_SPEED) manteniendo una
+## interpolación suave; factor <= 1 devuelve el audio intacto.
+static func _resample(samples: PackedFloat32Array, factor: float) -> PackedFloat32Array:
+	if factor <= 1.0 or samples.size() < 2:
+		return samples
+	var n_out := int(samples.size() / factor)
+	var out := PackedFloat32Array()
+	out.resize(n_out)
+	for i in n_out:
+		var src := float(i) * factor
+		var i0 := int(src)
+		var i1 := mini(i0 + 1, samples.size() - 1)
+		out[i] = lerpf(samples[i0], samples[i1], src - float(i0))
+	return out
+
+## Recorta el silencio de cabeza y cola de una palabra, conservando márgenes.
+## Si no hay silencio que recortar (síntesis formant), devuelve el audio intacto.
+static func _trim_silence(samples: PackedFloat32Array) -> PackedFloat32Array:
+	var n := samples.size()
+	if n < int(VOICE_RATE * 0.05):
+		return samples
+	var first := -1
+	var last := -1
+	for i in n:
+		if absf(samples[i]) > SILENCE_THRESHOLD:
+			if first < 0:
+				first = i
+			last = i
+	if first < 0:
+		return samples  # todo silencio: mejor no tocar
+	var start := maxi(0, first - int(VOICE_RATE * KEEP_HEAD))
+	var end := mini(n, last + 1 + int(VOICE_RATE * KEEP_TAIL))
+	return samples.slice(start, end)
 
 ## Extrae muestras mono 16-bit de cualquier WAV del juego.
 static func _wave_samples(audio: AudioStreamWAV) -> PackedFloat32Array:
@@ -447,6 +497,45 @@ static func container_kchk() -> AudioStreamWAV:
 		var t2 := t - 0.04
 		var c2v := exp(-t2 * 140.0) if t2 >= 0.0 and t2 < 0.03 else 0.0
 		out[i] = (c1v + c2v) * lp * 0.7
+	return _mono(out, rate)
+
+# Sonido · Recogida exitosa: dos pulsos ascendentes "ding-ding" positivos.
+# Anticipo un semitono por muestra guardada al subirle el pitch en runtime.
+static func collect_ok() -> AudioStreamWAV:
+	var rate := AudioServer.get_mix_rate()
+	var n := int(rate * 0.35)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var t1 := 0.17
+	for i in n:
+		var t := float(i) / rate
+		var v := 0.0
+		if t < t1:
+			var p := t / t1
+			v = sin(TAU * lerpf(784.0, 830.0, p) * t) * sin(PI * p) * 0.55
+		else:
+			var p := (t - t1) / (0.35 - t1)
+			v = sin(TAU * lerpf(1175.0, 1245.0, p) * (t - t1)) * sin(PI * p) * 0.55
+		out[i] = v
+	return _mono(out, rate)
+
+# Sonido · Cancelación (no hay roca delante): "bup-bup" doble bajo y descendente.
+static func cancel_sfx() -> AudioStreamWAV:
+	var rate := AudioServer.get_mix_rate()
+	var n := int(rate * 0.28)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var t1 := 0.15
+	for i in n:
+		var t := float(i) / rate
+		var v := 0.0
+		if t < t1:
+			var p := t / t1
+			v = sin(TAU * lerpf(220.0, 205.0, p) * t) * sin(PI * p) * 0.5
+		else:
+			var p := (t - t1) / (0.28 - t1)
+			v = sin(TAU * lerpf(185.0, 172.0, p) * (t - t1)) * sin(PI * p) * 0.5
+		out[i] = v
 	return _mono(out, rate)
 
 # Sonido de giro: servo mecánico — barrido descendente + ruido filtrado, corto.

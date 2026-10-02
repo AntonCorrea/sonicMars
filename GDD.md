@@ -60,8 +60,9 @@ El mundo se divide en **casillas de 80 px** (grilla 16×9 = 1280×720, encasilla
 **Por qué grilla:** posiciones deterministas, narración audible exacta ("a X casillas"), colisión trivial, y aditividad para futuras mecánicas (geiger por distancia de casilla).
 
 ### Accesibilidad de input
-- Cada botón = **una sola función** (sin tap/hold): LT = alrededores · RT = espectrómetro. Un solo gesto mental por acción.
+- Cada botón = **una sola función** (sin tap/hold): LT = alrededores · RT = recoger. Un solo gesto mental por acción.
 - La misión se completa solo con **LT + RT** (y los pasos): garantía de accesibilidad (ojos cerrados).
+- **Visión reducida:** paleta de alto contraste sobre fondo casi negro — amarillo = rocas, cian = base, naranja con borde blanco = rover, blanco = "adelante", magenta = brújula OESTE. El HUD es texto casi blanco, grande y con contorno negro; el botón de reinicio es amarillo con texto negro. Los objetos se distinguen por **forma + luminancia**, no solo por color (sin depender de rojo/verde).
 
 ---
 
@@ -70,7 +71,7 @@ El mundo se divide en **casillas de 80 px** (grilla 16×9 = 1280×720, encasilla
 | Herramienta | Gesto | Devuelve |
 |---|---|---|
 | **Alrededores** | LT / Q | Roca más cercana dentro de un cono frontal de ~90° (crece hasta 5 casillas de ancho): tipo + distancia + dirección relativa |
-| **Espectrómetro** | RT / E | Recoge y cataloga la muestra de la roca en la casilla justo delante |
+| **Espectrómetro** | RT / E | Recoge la muestra de la roca en la casilla justo delante |
 
 > **Estado demo:** el sonar de geometría (pulso) y la vara (hold) fueron **removidos por ahora** para reducir a un gesto mental por botón; **LT se reasignó a alrededores** (Q en teclado). Si la navegación a oscuras lo exige, son los primeros candidatos a reintroducir. La voz de identificación vive en los alrededores; el apoyo de navegación es el **conteo de pasos** (crunch) y el **golpe seco** al bloquearse.
 
@@ -138,8 +139,8 @@ LT → voz: la roca más cercana dentro de la banda, con **dirección relativa**
 ### 5 · El primer beacon
 Click Geiger de una roca cercana. **Descubrimiento #2:** acercarse acelera el click → una aguja sonora. Precio: confirmar con **LT** al llegar.
 
-### 6 · Espectrómetro
-RT/E con la roca en la casilla de enfrente → chirrido → silencio → voz descripción → contenedor *kchk* → `✓ Muestra 1 de 2`. Las rocas recolectadas desaparecen, liberan su casilla y dejan de detectarse.
+### 6 · Espectrómetro (recoger)
+RT/E con la roca en la casilla de enfrente → sonido de éxito → voz "roca de basalto recogida" → `✓ Muestra 1 de 2`. Las rocas recolectadas desaparecen, liberan su casilla y dejan de detectarse. RT/E sin roca delante (o roca decorativa) → sonido de cancelación → voz correspondiente.
 
 4 rocas: 2 catalogables con tipos y voces distintas (basalto en el cuadrante norte · regolito al oeste) y 2 decorativas (obsidiana, sedimentaria al sur). La brecha de impacto ya no forma parte de la demo.
 

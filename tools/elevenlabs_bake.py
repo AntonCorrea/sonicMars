@@ -51,6 +51,8 @@ WORDS = {
     "todas": "todas", "las": "las", "muestras": "muestras",
     "recolectadas": "recolectadas", "volver": "volver",
     "mision": "misión", "cumplida": "cumplida",
+    "recogida": "recogida", "recoger": "recoger", "recogible": "recogible",
+    "hay": "hay", "que": "que",
 }
 
 NUMS = ["uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho",
@@ -72,6 +74,8 @@ def main() -> None:
     ap.add_argument("--key", default=os.environ.get("ELEVENLABS_API_KEY", ""),
                     help="API key (o variable ELEVENLABS_API_KEY)")
     ap.add_argument("--seed", type=int, default=0, help="semilla base de consistencia")
+    ap.add_argument("--words", default="",
+                    help="sólo estas claves separadas por coma (test de un subconjunto); por defecto todas")
     ap.add_argument("--delay", type=float, default=0.5, help="pausa entre llamadas (s)")
     args = ap.parse_args()
 
@@ -82,6 +86,9 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
 
     items = list(WORDS.items()) + [(n, n) for n in NUMS]
+    if args.words:
+        sel = {w.strip() for w in args.words.split(",") if w.strip()}
+        items = [it for it in items if it[0] in sel]
     url = f"{API}/{args.voice_id}?output_format=wav_22050"
     for key, text in items:
         dest = out / f"{key}.wav"

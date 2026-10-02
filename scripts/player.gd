@@ -206,30 +206,33 @@ func _held_axes() -> Vector2:
 	return Vector2.ZERO
 
 # Depuración visual (modo contraste alto en fase posterior).
-# Dos flechas: la dorada marca el "adelante" (nariz del cuerpo, -Y local) y la
-# celeste es una brújula que siempre apunta al OESTE del mundo.
+# Paleta de alto contraste para visión reducida: cuerpo naranja brillante con
+# borde blanco; la flecha BLANCA marca el "adelante" (nariz del cuerpo, -Y
+# local) — es lo más luminoso en pantalla; la brújula MAGENTA siempre apunta
+# al OESTE del mundo. Nada depende de distinguir rojo/verde.
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, 14.0, Color(0.85, 0.55, 0.15))
+	draw_circle(Vector2.ZERO, 14.0, Color(0.98, 0.58, 0.1))
+	draw_arc(Vector2.ZERO, 14.0, 0.0, TAU, 32, Color(1.0, 1.0, 1.0), 2.0)
 	# Adelante: la nariz es el eje local -Y (forward_angle gira el nodo para que
 	# (0,-1) local apunte a facing en el mundo → la flecha acompaña el giro).
 	var perp := Vector2(0, -1).rotated(PI / 2.0)
 	var tip := Vector2(0, -1) * 36.0
 	draw_colored_polygon(
 		PackedVector2Array([Vector2.ZERO, tip + perp * 10.0, tip - perp * 10.0]),
-		Color(1.0, 0.9, 0.3)
+		Color(1.0, 1.0, 1.0)
 	)
-	draw_circle(tip, 5.0, Color(1.0, 0.85, 0.4))
+	draw_circle(tip, 5.0, Color(1.0, 1.0, 1.0))
 	# Brújula OESTE: fija en pantalla (al mundo), sin importar el giro del rover.
 	var west := west_local()
 	var w_perp := west.rotated(PI / 2.0)
-	draw_line(Vector2.ZERO, west * 21.0, Color(0.35, 0.75, 1.0), 3.0)
+	draw_line(Vector2.ZERO, west * 21.0, Color(1.0, 0.4, 0.85), 4.0)
 	draw_colored_polygon(
 		PackedVector2Array([
 			west * 30.0,
 			west * 21.0 + w_perp * 8.0,
 			west * 21.0 - w_perp * 8.0,
 		]),
-		Color(0.35, 0.75, 1.0)
+		Color(1.0, 0.4, 0.85)
 	)
 
 ## Dirección local (espacio del cuerpo) del OESTE del mundo: se usa para dibujar
