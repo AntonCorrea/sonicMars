@@ -37,5 +37,18 @@ func _run() -> void:
 	_check(player.axes_dpad_to_command(0.0, -0.5, 0.0, 1.0) == "right", "cruzeta derecha arrastra a RS izquierda (0.5)")
 	_check(player.axes_dpad_to_command(0.0, 0.0, 0.0, 0.0) == "", "sin cruzeta ni palancas = sin comando")
 
+	# Convenciones de vector runtime (axes = Vector2(ly, rx) · dpad = Vector2(dpad_rx, dpad_ly)):
+	# regresión: la palanca IZQ conduce y la DER gira (nunca al revés).
+	_check(player.axes_vec_to_command(Vector2(-1.0, 0.0), Vector2.ZERO) == "fwd", "LS arriba = avanzar (vector)")
+	_check(player.axes_vec_to_command(Vector2(1.0, 0.0), Vector2.ZERO) == "back", "LS abajo = retroceder (vector)")
+	_check(player.axes_vec_to_command(Vector2(0.0, -1.0), Vector2.ZERO) == "left", "RS izquierda = girar izq (vector)")
+	_check(player.axes_vec_to_command(Vector2(0.0, 1.0), Vector2.ZERO) == "right", "RS derecha = girar der (vector)")
+	_check(player.axes_vec_to_command(Vector2.ZERO, Vector2(0.0, -1.0)) == "fwd", "cruzeta arriba = avanzar (vector)")
+	_check(player.axes_vec_to_command(Vector2.ZERO, Vector2(0.0, 1.0)) == "back", "cruzeta abajo = retroceder (vector)")
+	_check(player.axes_vec_to_command(Vector2.ZERO, Vector2(-1.0, 0.0)) == "left", "cruzeta izquierda = girar izq (vector)")
+	_check(player.axes_vec_to_command(Vector2.ZERO, Vector2(1.0, 0.0)) == "right", "cruzeta derecha = girar der (vector)")
+	_check(player.axes_vec_to_command(Vector2(-1.0, 0.0), Vector2(0.0, 1.0)) == "", "LS arriba y cruzeta abajo se cancelan")
+	_check(player.axes_vec_to_command(Vector2(0.0, 1.0), Vector2(-1.0, 0.0)) == "", "RS derecha y cruzeta izquierda se cancelan")
+
 	print("RESULTADO: %d fallos" % _failures)
 	quit(1 if _failures > 0 else 0)

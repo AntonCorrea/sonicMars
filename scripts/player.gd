@@ -186,6 +186,13 @@ static func axes_dpad_to_command(ly: float, rx: float, dpad_ly: float, dpad_rx: 
 	var h := clampf(rx + dpad_rx, -1.0, 1.0)
 	return Player.axes_to_command(v, h)
 
+## Convenciones de vector en runtime: axes = Vector2(ly, rx) (LS Y conduce ·
+## RS X gira) y dpad = Vector2(dpad_rx, dpad_ly) (cruzeta: x gira · y conduce).
+## Devuelve el comando dominante combinando palancas + cruzeta. Único lugar que
+## traduce los vectores `_held_axes`/`_held_dpad` al par (ly, rx, dpad_ly, dpad_rx).
+static func axes_vec_to_command(axes: Vector2, dpad: Vector2) -> String:
+	return Player.axes_dpad_to_command(axes.x, axes.y, dpad.y, dpad.x)
+
 func _axes_to_command(ly: float, rx: float) -> String:
 	return Player.axes_to_command(ly, rx)
 
@@ -195,7 +202,7 @@ func _axes_to_command(ly: float, rx: float) -> String:
 func _held_dir() -> String:
 	var a := _held_axes()
 	var dp := _held_dpad()
-	var cmd := Player.axes_dpad_to_command(a.y, a.x, dp.y, dp.x)
+	var cmd := Player.axes_vec_to_command(a, dp)
 	if cmd != "":
 		return cmd
 	var k := Vector2.ZERO
@@ -221,7 +228,8 @@ func _candidate_pads() -> PackedInt32Array:
 			ids.append(id)
 	return ids
 
-## Primer pad con ejes vivos (LY, RX); ZERO si ninguno supera la zona muerta.
+## Primer pad con ejes vivos; devuelve Vector2(ly, rx) (LS Y conduce · RS X gira).
+## ZERO si ninguno supera la zona muerta.
 func _held_axes() -> Vector2:
 	for id in _candidate_pads():
 		var ly := Input.get_joy_axis(id, JOY_AXIS_LEFT_Y)
@@ -230,9 +238,9 @@ func _held_axes() -> Vector2:
 			return Vector2(ly, rx)
 	return Vector2.ZERO
 
-## Cruzeta digital (D-pad): flechas con la misma convención que las palancas
-## (x = eje de giro, y = eje de avance; arriba/izquierda = negativo). Primera
-## pad candidata con botones de cruzeta presionados.
+## Cruzeta digital (D-pad): flechas con la misma convención que las palancas;
+## devuelve Vector2(dpad_rx, dpad_ly) (x = eje de giro, y = eje de avance;
+## arriba/izquierda = negativo). Primera pad candidata con botones presionados.
 func _held_dpad() -> Vector2:
 	for id in _candidate_pads():
 		var d := Vector2.ZERO
