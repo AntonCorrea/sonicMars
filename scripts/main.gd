@@ -22,6 +22,9 @@ extends Node2D
 const SPAWN_CELL := Vector2i(13, 1)
 const BASE_CELL := Vector2i(13, 1)
 
+## Volumen de los sonidos de feedback (éxito/cancel): algo por debajo del bus SFX.
+const SFX_FEEDBACK_DB := -6.0
+
 var grid := MapGrid.new()
 
 var _wind_player: AudioStreamPlayer
@@ -107,6 +110,8 @@ func _ready() -> void:
 	_turn_player = _make_sfx_player(AudioLib.turn())
 	_success_player = _make_sfx_player(load("res://assets/kagateni__success2.wav"))
 	_cancel_player = _make_sfx_player(load("res://assets/kagateni__cancel.wav"))
+	_success_player.volume_db = SFX_FEEDBACK_DB
+	_cancel_player.volume_db = SFX_FEEDBACK_DB
 
 	_voice_player = AudioStreamPlayer.new()
 	_voice_player.bus = "Voz"
