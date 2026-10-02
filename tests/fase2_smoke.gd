@@ -84,7 +84,7 @@ func _run() -> void:
 	_check(main._relative_dir(Vector2i(10, 4)) == "delante", "E: al este = delante")
 
 	# Alrededores: nombra sólo la roca más cercana + dirección.
-	# Desde (12,5) mirando al OESTE: regolito (10,5) a 2 delante.
+	# Desde (12,5) mirando al OESTE: obsidiana (10,5) a 2 delante (la más cercana).
 	player.cell = Vector2i(12, 5)
 	player.position = MapGrid.center(player.cell)
 	player.facing = MapGrid.W
@@ -92,19 +92,19 @@ func _run() -> void:
 	main._describe_surroundings()
 	var around: String = main._debug_label.text.to_lower()
 	_check(around.contains("alrededor"), "alrededores actualiza la etiqueta")
-	_check("regolito" in around, "alrededores nombra la roca más cercana")
+	_check("obsidiana" in around, "alrededores nombra la roca más cercana")
 	_check("delante" in around, "alrededores da dirección relativa")
 	_check(not ("base" in around), "alrededores ya no menciona la base")
 
 	# Cono frontal: desde (7,5) mirando al este, la sedimentaria (6,7) queda
-	# fuera del cono (detrás-izquierda) y se nombra la del cono: regolito.
+	# fuera del cono (detrás-izquierda) y se nombra la del cono: obsidiana (10,5).
 	player.cell = Vector2i(7, 5)
 	player.position = MapGrid.center(player.cell)
 	player.facing = MapGrid.E
 	player.rotation = MapGrid.forward_angle(player.facing)
 	main._describe_surroundings()
 	var around_e: String = main._debug_label.text.to_lower()
-	_check("regolito" in around_e, "alrededores sólo escanea el cono frontal")
+	_check("obsidiana" in around_e, "alrededores sólo escanea el cono frontal")
 	_check(not ("sedimentaria" in around_e), "alrededores ignora roca fuera del cono")
 
 	# Re-activo la detección de basalto para el test del cono de costado
